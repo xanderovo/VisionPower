@@ -99,9 +99,25 @@ Base URL：https://dashscope.aliyuncs.com/compatible-mode/v1
 
 **准备工作**：Node.js 18+，以及一个支持视觉模型的 OpenAI-compatible API Key（阿里云百炼 Key 申请：<https://bailian.console.aliyun.com/?tab=model#/api-key>）。
 
-### MCP JSON 配置
+### 手动安装
 
-适用于 Claude Desktop、Cursor、Cline、Cherry Studio 等使用 JSON 配置 MCP 的工具。
+适用于 Claude Desktop、Cursor、Cline、Cherry Studio 等用 JSON/TOML 配置 MCP 的工具。这些宿主**不会替你下载、也不会自动测连接**——先在终端确认能拉到包、API Key 能通，再贴配置，最少返工。
+
+**① 先在终端下载并自检**
+
+跑一次下面的命令，它会拉取 VisionPower 并尝试 MCP 握手；握手成功就说明你的网络、包、Key 都没问题：
+
+```bash
+# 官方源
+npx -y --package visionpower@latest visionpower
+# 中国大陆 / 弱网
+npx -y --registry=https://registry.npmmirror.com --package visionpower@latest visionpower
+```
+
+> 进程正常挂起不报错（看到 `Running VisionPower MCP server` 之类输出）即说明通了，`Ctrl+C` 退出。包已缓存到本地，后续宿主启动会更快。
+> 偶尔失败？弱网或长期使用可改全局安装：`npm install -g visionpower@latest`（国内加 `--registry=https://registry.npmmirror.com`）。
+
+**② 写进宿主配置**
 
 ```json
 {
@@ -119,20 +135,9 @@ Base URL：https://dashscope.aliyuncs.com/compatible-mode/v1
 }
 ```
 
-<details>
-<summary><b>🇨🇳 国内 npm 镜像版（弱网推荐）</b></summary>
+> 国内镜像把 `args` 换成 `["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]`。
 
-把 `args` 换成走 npmmirror 拉取：
-
-```json
-"args": ["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]
-```
-
-</details>
-
-### Codex TOML 配置
-
-Codex 使用 TOML（不是 JSON）。写入 `~/.codex/config.toml`：
+**③ Codex 用 TOML**（不是 JSON），写入 `~/.codex/config.toml`：
 
 ```toml
 [mcp_servers."visionpower"]
@@ -146,18 +151,7 @@ VISIONPOWER_MODEL = "qwen3-vl-flash"
 VISIONPOWER_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-> 国内镜像把 `args` 改为 `["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]`。
-
-<details>
-<summary><b>先全局安装再配置（弱网 / 长期使用最稳定）</b></summary>
-
-```bash
-npm install -g visionpower@latest   # 国内加 --registry=https://registry.npmmirror.com
-```
-
-然后把 `command` 配成本地命令 `visionpower`（`args: []`）。若 GUI 应用（Claude Desktop / Cursor）找不到命令，先 `which visionpower` 取绝对路径，再填进 `command`。
-
-</details>
+> 配置在宿主**启动时**读取，写完需**重启**该工具才会在会话中生效。
 
 ---
 

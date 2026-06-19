@@ -102,9 +102,25 @@ write this into provider/model configuration.
 
 **Requirements**: Node.js 18+ and a vision-capable OpenAI-compatible API key (Alibaba Cloud Model Studio key: <https://bailian.console.aliyun.com/?tab=model#/api-key>).
 
-### MCP JSON config
+### Manual install
 
-For tools that configure MCP servers with JSON, such as Claude Desktop, Cursor, Cline, and Cherry Studio.
+For tools that configure MCP servers with JSON/TOML, such as Claude Desktop, Cursor, Cline, and Cherry Studio. These hosts **will neither download the package nor auto-test the connection for you** — verify in a terminal first that the package pulls and the API key works, then add the config, to avoid round-trips.
+
+**① Download and self-check in a terminal first**
+
+Run the command below once. It pulls VisionPower and attempts an MCP handshake; a successful handshake means your network, the package, and the key are all fine:
+
+```bash
+# Official registry
+npx -y --package visionpower@latest visionpower
+# Mainland China / unreliable networks
+npx -y --registry=https://registry.npmmirror.com --package visionpower@latest visionpower
+```
+
+> If the process stays up without errors (you'll see something like `Running VisionPower MCP server`), you're good — `Ctrl+C` to exit. The package is now cached locally, so later host starts are faster.
+> Keeps failing? On unreliable networks or for long-term use, switch to a global install: `npm install -g visionpower@latest` (add `--registry=https://registry.npmmirror.com` in China).
+
+**② Add it to your host config**
 
 ```json
 {
@@ -122,20 +138,9 @@ For tools that configure MCP servers with JSON, such as Claude Desktop, Cursor, 
 }
 ```
 
-<details>
-<summary><b>🇨🇳 Mainland China npm mirror (recommended for unreliable networks)</b></summary>
+> For the China mirror, change `args` to `["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]`.
 
-Point `args` at npmmirror:
-
-```json
-"args": ["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]
-```
-
-</details>
-
-### Codex TOML config
-
-Codex uses TOML instead of JSON. Add this to `~/.codex/config.toml`:
+**③ Codex uses TOML** (not JSON). Add this to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers."visionpower"]
@@ -149,18 +154,7 @@ VISIONPOWER_MODEL = "qwen3-vl-flash"
 VISIONPOWER_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-> For the China mirror, change `args` to `["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]`.
-
-<details>
-<summary><b>Install globally first (most stable for unreliable networks / long-term use)</b></summary>
-
-```bash
-npm install -g visionpower@latest   # add --registry=https://registry.npmmirror.com in China
-```
-
-Then set `command` to the local `visionpower` (`args: []`). If a GUI app (Claude Desktop / Cursor) cannot find it, run `which visionpower` for the absolute path and use that as `command`.
-
-</details>
+> The host reads config **at startup**, so you must **restart** the tool after saving before it takes effect in the session.
 
 ---
 

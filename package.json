@@ -1,0 +1,36 @@
+{
+  "name": "@runhua/vision-mcp",
+  "version": "0.1.0",
+  "description": "Vision++ MCP: a portable image understanding MCP server for Codex, Claude Desktop, Cursor, and other agents.",
+  "type": "module",
+  "bin": {
+    "vision-mcp": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node src/index.js",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "vision",
+    "ocr",
+    "image-understanding",
+    "codex",
+    "claude"
+  ],
+  "author": "Runhua",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.0.0"
+  }
+}

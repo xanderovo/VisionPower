@@ -78,21 +78,23 @@ VisionPower 让 Codex、Claude Desktop、Cursor、Cline、Cherry Studio 等 Agen
 ```text
 请帮我安装并配置 VisionPower MCP。
 
-我的视觉模型 API Key 是：填写你的 API Key
-模型使用：qwen3-vl-flash
-Base URL 使用：https://dashscope.aliyuncs.com/compatible-mode/v1
+视觉模型 API Key：填写你的 API Key（会以明文写入配置，注意文件安全）
+模型：qwen3-vl-flash
+Base URL：https://dashscope.aliyuncs.com/compatible-mode/v1
 
-如果当前环境访问 npm 官方源稳定，请使用：
-npx -y visionpower
+【安装】先实测 npm 源连通性：
+- 官方源稳定 → npx -y visionpower
+- 不稳定/中国大陆网络 → npx -y --registry=https://registry.npmmirror.com visionpower
+- 仅当 npx 连续失败，才 npm install -g visionpower 并把 command 配成 visionpower
 
-如果访问 npm 官方源不稳定，或位于中国大陆网络环境，请优先使用：
-npx -y --registry=https://registry.npmmirror.com visionpower
+【写配置——重点】
+不要套用通用模板。先在本 Agent 的配置目录里找一个【已经存在且正在运行的 MCP server 配置】
+作为格式模板，严格照搬它的【文件位置 + 字段结构】来新增 visionpower。
+若存在多个候选文件，以“已有 MCP server 在用”的那个为准，不要写到 provider 模型配置里。
 
-如果你判断 npx 启动不稳定，请先运行：
-npm install -g visionpower --registry=https://registry.npmmirror.com
-然后把 MCP command 配成 visionpower。
-
-请根据当前 Agent 的配置格式写入 MCP 配置，并确认 describe_image 工具可用。
+【验证】分两步确认：
+1. 进程级：用写入的 command+env 拉起进程做 MCP 握手，确认 tools/list 返回 describe_image；
+2. 告知用户：配置在宿主启动时读取，需重启该 Agent 工具才会在会话中生效。
 ```
 
 **准备工作**：Node.js 18+，以及一个支持视觉模型的 OpenAI-compatible API Key（阿里云百炼 Key 申请：<https://bailian.console.aliyun.com/?tab=model#/api-key>）。

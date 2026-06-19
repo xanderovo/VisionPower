@@ -79,21 +79,25 @@ Copy the prompt below and send it to your agent (swap in your API key):
 ```text
 Please install and configure VisionPower MCP for me.
 
-My vision model API key is: your-api-key
-Use this model: qwen3-vl-flash
-Use this base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+Vision model API key: your-api-key (it will be written to the config in plaintext; keep the config file secure)
+Model: qwen3-vl-flash
+Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
 
-If the official npm registry is stable in this environment, use:
-npx -y visionpower
+[Install] First test npm registry connectivity:
+- Official registry is stable → npx -y visionpower
+- Unstable / mainland China network → npx -y --registry=https://registry.npmmirror.com visionpower
+- Only if npx fails repeatedly, run npm install -g visionpower and set command to visionpower
 
-If access to the official npm registry is unstable, or this environment is on a mainland China network, prefer:
-npx -y --registry=https://registry.npmmirror.com visionpower
+[Write config — important]
+Do not apply a generic template. First find an existing MCP server config that is already present
+and running in this agent's config directory. Use it as the format template, and strictly follow
+its file location and field structure when adding visionpower.
+If multiple candidate config files exist, use the one that already has an MCP server in use; do not
+write this into provider/model configuration.
 
-If npx startup seems unstable, first run:
-npm install -g visionpower --registry=https://registry.npmmirror.com
-Then configure the MCP command as visionpower.
-
-Please write the MCP configuration in the format required by the current agent and confirm that the describe_image tool is available.
+[Verify] Confirm in two steps:
+1. Process level: start the process with the written command+env, perform an MCP handshake, and confirm tools/list returns describe_image;
+2. Tell the user: the host reads config at startup, so this agent tool must be restarted before the tool appears in the session.
 ```
 
 **Requirements**: Node.js 18+ and a vision-capable OpenAI-compatible API key (Alibaba Cloud Model Studio key: <https://bailian.console.aliyun.com/?tab=model#/api-key>).

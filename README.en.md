@@ -17,14 +17,31 @@ VisionPower defaults to Qwen VL through Alibaba Cloud Model Studio / DashScope's
 
 Alibaba Cloud Model Studio / Bailian:
 
-- Official console: https://bailian.console.aliyun.com/cn-beijing#/home
 - API Key page: https://bailian.console.aliyun.com/?tab=model#/api-key
 
 ## Quick Start
 
 Choose one installation channel based on your network.
 
-### 1. Users with VPN or stable npm access
+### 1. Easiest: ask your agent to install it for you
+
+If your agent can edit its own MCP configuration, send it this instruction and let it install/configure VisionPower automatically:
+
+```text
+Please install and configure VisionPower MCP for me.
+
+My vision model API key is: your-api-key
+Use this model: qwen3-vl-flash
+Use this base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+If the official npm registry is stable in this environment, use npx -y visionpower.
+If this environment is in mainland China without VPN, prefer npx -y --registry=https://registry.npmmirror.com visionpower.
+If npx startup seems unstable, first run npm install -g visionpower --registry=https://registry.npmmirror.com, then configure the MCP command as visionpower.
+
+Please write the MCP configuration in the format required by the current agent and confirm that the describe_image tool is available.
+```
+
+### 2. Users with VPN or stable npm access
 
 Use the official npm registry:
 
@@ -44,7 +61,7 @@ Use the official npm registry:
 }
 ```
 
-### 2. Users in mainland China without VPN: npm mirror
+### 3. Users in mainland China without VPN: npm mirror
 
 Use npmmirror for the first download:
 
@@ -64,7 +81,7 @@ Use npmmirror for the first download:
 }
 ```
 
-### 3. Users in mainland China without VPN: install locally first
+### 4. Users in mainland China without VPN: install locally first
 
 This is the most stable option for long-term use.
 

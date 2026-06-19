@@ -17,14 +17,31 @@ VisionPower 默认使用阿里云百炼 / DashScope 的 Qwen VL OpenAI-compatibl
 
 阿里云百炼：
 
-- 官网控制台：https://bailian.console.aliyun.com/cn-beijing#/home
 - API Key 页面：https://bailian.console.aliyun.com/?tab=model#/api-key
 
 ## 快速开始
 
 根据你的网络环境选择一种安装渠道。
 
-### 1. 有 VPN 或 npm 官方源访问稳定的用户
+### 1. 最简单：把安装指令交给 Agent
+
+如果你的 Agent 能编辑自己的 MCP 配置，可以直接把下面这段话发给它，让它自动完成安装和配置：
+
+```text
+请帮我安装并配置 VisionPower MCP。
+
+我的视觉模型 API Key 是：填写你的 API Key
+模型使用：qwen3-vl-flash
+Base URL 使用：https://dashscope.aliyuncs.com/compatible-mode/v1
+
+如果当前环境访问 npm 官方源稳定，请用 npx -y visionpower。
+如果当前环境在中国大陆且没有 VPN，请优先用 npx -y --registry=https://registry.npmmirror.com visionpower。
+如果你判断 npx 启动不稳定，请先运行 npm install -g visionpower --registry=https://registry.npmmirror.com，再把 MCP command 配成 visionpower。
+
+请根据当前 Agent 的配置格式写入 MCP 配置，并确认工具名 describe_image 可用。
+```
+
+### 2. 有 VPN 或 npm 官方源访问稳定的用户
 
 使用 npm 官方源：
 
@@ -44,7 +61,7 @@ VisionPower 默认使用阿里云百炼 / DashScope 的 Qwen VL OpenAI-compatibl
 }
 ```
 
-### 2. 没有 VPN 的国内用户：使用 npm 镜像
+### 3. 没有 VPN 的国内用户：使用 npm 镜像
 
 使用 npmmirror 作为首次下载渠道：
 
@@ -64,7 +81,7 @@ VisionPower 默认使用阿里云百炼 / DashScope 的 Qwen VL OpenAI-compatibl
 }
 ```
 
-### 3. 没有 VPN 的国内用户：先下载到本地
+### 4. 没有 VPN 的国内用户：先下载到本地
 
 这是长期使用最稳定的方式。
 

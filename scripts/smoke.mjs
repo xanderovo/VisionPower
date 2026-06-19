@@ -12,7 +12,6 @@ const transport = new StdioClientTransport({
     ...process.env,
     VISIONPOWER_API_KEY: '',
     OPENAI_API_KEY: '',
-    RUN_VISION_API_KEY: '',
     VISIONPOWER_CONFIG: '/nonexistent/visionpower-smoke-config.json',
   },
 })
@@ -48,7 +47,6 @@ const skillExit = await new Promise((resolve, reject) => {
   const child = spawn(process.execPath, ['VisionPower-Skill/describe_image.mjs'], {
     env: {
       ...process.env,
-      RUN_VISION_API_KEY: '',
       VISIONPOWER_API_KEY: '',
       OPENAI_API_KEY: '',
       VISIONPOWER_CONFIG: '/nonexistent/visionpower-smoke-config.json',

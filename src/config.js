@@ -206,26 +206,26 @@ function allowedDirsFromFile(value) {
 export function loadVisionConfig(env = process.env) {
   const file = loadConfigFile(env)
 
-  const modelFile = readFileStringValue(file, ['model', 'VISIONPOWER_MODEL', 'RUN_VISION_MODEL'])
-  const model = readEnvValue(env, ['VISIONPOWER_MODEL', 'RUN_VISION_MODEL']).value
+  const modelFile = readFileStringValue(file, ['model', 'VISIONPOWER_MODEL'])
+  const model = readEnvValue(env, ['VISIONPOWER_MODEL']).value
     || modelFile.value
     || DEFAULT_VISION_MODEL
 
-  const apiKeyFile = readFileStringValue(file, ['apiKey', 'VISIONPOWER_API_KEY', 'RUN_VISION_API_KEY', 'OPENAI_API_KEY'])
-  const apiKey = readEnvValue(env, ['VISIONPOWER_API_KEY', 'RUN_VISION_API_KEY', 'OPENAI_API_KEY']).value
+  const apiKeyFile = readFileStringValue(file, ['apiKey', 'VISIONPOWER_API_KEY', 'OPENAI_API_KEY'])
+  const apiKey = readEnvValue(env, ['VISIONPOWER_API_KEY', 'OPENAI_API_KEY']).value
     || apiKeyFile.value
     || ''
 
-  const baseUrlEnv = readEnvValue(env, ['VISIONPOWER_BASE_URL', 'RUN_VISION_BASE_URL'])
-  const fileBaseUrl = readFileStringValue(file, ['baseUrl', 'VISIONPOWER_BASE_URL', 'RUN_VISION_BASE_URL'])
+  const baseUrlEnv = readEnvValue(env, ['VISIONPOWER_BASE_URL'])
+  const fileBaseUrl = readFileStringValue(file, ['baseUrl', 'VISIONPOWER_BASE_URL'])
   const rawBaseUrl = baseUrlEnv.value || fileBaseUrl.value || getDefaultBaseUrlForModel(model)
   const baseUrlSource = baseUrlEnv.value
     ? baseUrlEnv.name
     : fileBaseUrl.value ? fileBaseUrl.name : 'VISIONPOWER_BASE_URL'
   const baseUrl = normalizeBaseUrl(rawBaseUrl, baseUrlSource)
 
-  const allowedDirsEnv = readEnvValue(env, ['VISIONPOWER_ALLOWED_DIRS', 'RUN_VISION_ALLOWED_DIRS'])
-  const debugEnv = readEnvValue(env, ['VISIONPOWER_DEBUG', 'RUN_VISION_DEBUG'])
+  const allowedDirsEnv = readEnvValue(env, ['VISIONPOWER_ALLOWED_DIRS'])
+  const debugEnv = readEnvValue(env, ['VISIONPOWER_DEBUG'])
 
   return {
     apiKey,
@@ -234,11 +234,11 @@ export function loadVisionConfig(env = process.env) {
     allowedDirs: allowedDirsEnv.value
       ? parseAllowedDirs(allowedDirsEnv)
       : (allowedDirsFromFile(file.allowedDirs) ?? []),
-    maxImageBytes: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_IMAGE_BYTES', 'RUN_VISION_MAX_IMAGE_BYTES']), integerFromFile(file.maxImageBytes, 'maxImageBytes') ?? DEFAULT_MAX_IMAGE_BYTES),
-    requestTimeoutMs: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_TIMEOUT_MS', 'RUN_VISION_TIMEOUT_MS']), integerFromFile(file.timeoutMs, 'timeoutMs') ?? DEFAULT_REQUEST_TIMEOUT_MS),
-    maxTokens: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_TOKENS', 'RUN_VISION_MAX_TOKENS']), integerFromFile(file.maxTokens, 'maxTokens') ?? DEFAULT_MAX_TOKENS),
-    maxImages: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_IMAGES', 'RUN_VISION_MAX_IMAGES']), integerFromFile(file.maxImages, 'maxImages') ?? DEFAULT_MAX_IMAGES),
-    maxRetries: parseNonNegativeInteger(readEnvValue(env, ['VISIONPOWER_MAX_RETRIES', 'RUN_VISION_MAX_RETRIES']), integerFromFile(file.maxRetries, 'maxRetries', { allowZero: true }) ?? DEFAULT_MAX_RETRIES),
+    maxImageBytes: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_IMAGE_BYTES']), integerFromFile(file.maxImageBytes, 'maxImageBytes') ?? DEFAULT_MAX_IMAGE_BYTES),
+    requestTimeoutMs: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_TIMEOUT_MS']), integerFromFile(file.timeoutMs, 'timeoutMs') ?? DEFAULT_REQUEST_TIMEOUT_MS),
+    maxTokens: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_TOKENS']), integerFromFile(file.maxTokens, 'maxTokens') ?? DEFAULT_MAX_TOKENS),
+    maxImages: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_IMAGES']), integerFromFile(file.maxImages, 'maxImages') ?? DEFAULT_MAX_IMAGES),
+    maxRetries: parseNonNegativeInteger(readEnvValue(env, ['VISIONPOWER_MAX_RETRIES']), integerFromFile(file.maxRetries, 'maxRetries', { allowZero: true }) ?? DEFAULT_MAX_RETRIES),
     debug: debugEnv.value ? parseBoolean(debugEnv) : (booleanFromFile(file.debug, 'debug') ?? false),
   }
 }

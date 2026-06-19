@@ -126,7 +126,7 @@ async function mainSkill() {
 }
 
 function isLikelySkillSetupError(message) {
-  return /not configured|config file|VISIONPOWER_|RUN_VISION_|OPENAI_API_KEY|base\\s*url|unauthori[sz]ed|forbidden|invalid[^\\n]*(api|key|token)|authentication|permission denied|\\b401\\b|\\b403\\b/i.test(message)
+  return /not configured|config file|VISIONPOWER_|OPENAI_API_KEY|base\\s*url|unauthori[sz]ed|forbidden|invalid[^\\n]*(api|key|token)|authentication|permission denied|\\b401\\b|\\b403\\b/i.test(message)
 }
 
 mainSkill()

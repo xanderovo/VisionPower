@@ -110,17 +110,12 @@ npm install -g visionpower --registry=https://registry.npmmirror.com
       "env": {
         "VISIONPOWER_API_KEY": "填写你的 API Key",
         "VISIONPOWER_MODEL": "qwen3-vl-flash",
-        "VISIONPOWER_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "RUN_VISION_API_KEY": "填写同一个 API Key（兼容旧版）",
-        "RUN_VISION_MODEL": "qwen3-vl-flash",
-        "RUN_VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        "VISIONPOWER_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
       }
     }
   }
 }
 ```
-
-> `VISIONPOWER_*` 是新版主配置名；`RUN_VISION_*` 是旧版兼容名。MCP 宿主如果还在缓存旧 npm 包，只写 `VISIONPOWER_API_KEY` 会出现 `RUN_VISION_API_KEY is not configured`。上面同时写两套可避免这个问题；升级到新版后只保留 `VISIONPOWER_*` 也可以。
 
 <details>
 <summary><b>🇨🇳 国内 npm 镜像版（弱网推荐）</b></summary>
@@ -147,9 +142,6 @@ args = ["-y", "visionpower"]
 VISIONPOWER_API_KEY = "填写你的 API Key"
 VISIONPOWER_MODEL = "qwen3-vl-flash"
 VISIONPOWER_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-RUN_VISION_API_KEY = "填写同一个 API Key（兼容旧版）"
-RUN_VISION_MODEL = "qwen3-vl-flash"
-RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
 > 国内镜像把 `args` 改为 `["-y", "--registry=https://registry.npmmirror.com", "visionpower"]`。
@@ -362,8 +354,6 @@ echo '<JSON 请求>' | node <skill>/describe_image.mjs # 或从 stdin 传入
 }
 ```
 
-为兼容把环境变量名误写进 JSON 的旧配置，也接受 `VISIONPOWER_API_KEY` / `RUN_VISION_API_KEY`、`VISIONPOWER_MODEL` / `RUN_VISION_MODEL`、`VISIONPOWER_BASE_URL` / `RUN_VISION_BASE_URL` 这些键；但新配置仍推荐使用上面的 `apiKey` / `model` / `baseUrl`。
-
 **环境变量**（会覆盖配置文件）：
 
 | 名称 | 必填 | 默认值 | 说明 |
@@ -380,7 +370,7 @@ echo '<JSON 请求>' | node <skill>/describe_image.mjs # 或从 stdin 传入
 | `VISIONPOWER_DEBUG` | | `false` | 设为 `true` 时向 stderr 输出请求模型、图片数与耗时等调试信息。 |
 | `VISIONPOWER_SKILL_STATE` | | `~/.visionpower/skill-state.json` | 仅 Skill 脚本使用：记录配置是否已成功验证，避免后续重复预检。 |
 
-> **命名与兼容**：主前缀是 `VISIONPOWER_*`。为向后兼容，也接受历史前缀 `RUN_VISION_*`（如 `RUN_VISION_API_KEY`，源自早期的 Run 应用集成），但 `VISIONPOWER_*` 优先级更高；新配置一律用 `VISIONPOWER_*`。API Key 还可回退读取 `OPENAI_API_KEY`。
+> **命名**：主前缀是 `VISIONPOWER_*`。API Key 还可回退读取 `OPENAI_API_KEY`。
 
 ---
 

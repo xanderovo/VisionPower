@@ -379,7 +379,7 @@ async function fetchVisionCompletion(requestBody, config) {
 export async function describeImage(params, config) {
   const images = normalizeImageInputs(params, config)
   if (!config.apiKey) {
-    throw new Error('API key is not configured. Set VISIONPOWER_API_KEY (preferred), RUN_VISION_API_KEY (legacy), OPENAI_API_KEY, or apiKey in ~/.visionpower/config.json')
+    throw new Error('API key is not configured. Set VISIONPOWER_API_KEY, OPENAI_API_KEY, or apiKey in ~/.visionpower/config.json')
   }
 
   const prompt = params.prompt?.trim()

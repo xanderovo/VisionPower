@@ -111,17 +111,12 @@ For tools that configure MCP servers with JSON, such as Claude Desktop, Cursor, 
       "env": {
         "VISIONPOWER_API_KEY": "your-api-key",
         "VISIONPOWER_MODEL": "qwen3-vl-flash",
-        "VISIONPOWER_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "RUN_VISION_API_KEY": "same-api-key (legacy compatibility)",
-        "RUN_VISION_MODEL": "qwen3-vl-flash",
-        "RUN_VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        "VISIONPOWER_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
       }
     }
   }
 }
 ```
-
-> `VISIONPOWER_*` is the preferred new prefix; `RUN_VISION_*` is the legacy compatibility prefix. If your MCP host is still running a cached old npm package, setting only `VISIONPOWER_API_KEY` can produce `RUN_VISION_API_KEY is not configured`. Setting both prefixes as above avoids that; after upgrading, keeping only `VISIONPOWER_*` is fine.
 
 <details>
 <summary><b>🇨🇳 Mainland China npm mirror (recommended for unreliable networks)</b></summary>
@@ -148,9 +143,6 @@ args = ["-y", "visionpower"]
 VISIONPOWER_API_KEY = "your-api-key"
 VISIONPOWER_MODEL = "qwen3-vl-flash"
 VISIONPOWER_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-RUN_VISION_API_KEY = "same-api-key (legacy compatibility)"
-RUN_VISION_MODEL = "qwen3-vl-flash"
-RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
 > For the China mirror, change `args` to `["-y", "--registry=https://registry.npmmirror.com", "visionpower"]`.
@@ -365,8 +357,6 @@ Both forms share the same configuration. Precedence: **env var > config file > d
 }
 ```
 
-For compatibility with older configs that accidentally used environment variable names as JSON keys, the file also accepts `VISIONPOWER_API_KEY` / `RUN_VISION_API_KEY`, `VISIONPOWER_MODEL` / `RUN_VISION_MODEL`, and `VISIONPOWER_BASE_URL` / `RUN_VISION_BASE_URL`; new configs should still prefer `apiKey` / `model` / `baseUrl`.
-
 **Environment variables** (override the config file):
 
 | Name | Required | Default | Description |
@@ -383,7 +373,7 @@ For compatibility with older configs that accidentally used environment variable
 | `VISIONPOWER_DEBUG` | | `false` | When `true`, logs the request model, image count, and timing to stderr. |
 | `VISIONPOWER_SKILL_STATE` | | `~/.visionpower/skill-state.json` | Skill script only: records whether setup has been verified so later calls can skip repeated preflight checks. |
 
-> **Naming & compatibility**: the primary prefix is `VISIONPOWER_*`. For backward compatibility the legacy prefix `RUN_VISION_*` is also accepted (e.g. `RUN_VISION_API_KEY`, a leftover from an earlier "Run" app integration), but `VISIONPOWER_*` takes precedence; use `VISIONPOWER_*` for anything new. The API key also falls back to `OPENAI_API_KEY`.
+> **Naming**: the primary prefix is `VISIONPOWER_*`. The API key also falls back to `OPENAI_API_KEY`.
 
 ---
 

@@ -199,8 +199,8 @@ try {
   const cfg = (overrides = {}) => loadVisionConfig({ VISIONPOWER_CONFIG: absentConfig, ...overrides })
 
   const normalized = cfg({
-    RUN_VISION_API_KEY: 'k',
-    RUN_VISION_BASE_URL: 'https://api.example.com/v1//',
+    VISIONPOWER_API_KEY: 'k',
+    VISIONPOWER_BASE_URL: 'https://api.example.com/v1//',
   })
   assert.equal(normalized.baseUrl, 'https://api.example.com/v1')
   assert.equal(normalized.maxImageBytes, 20 * 1024 * 1024)
@@ -224,23 +224,11 @@ try {
   assert.equal(visionpowerEnv.maxTokens, 3456)
   assert.equal(visionpowerEnv.maxImages, 4)
 
-  const runEnv = cfg({
-    RUN_VISION_API_KEY: 'run-key',
-    RUN_VISION_MODEL: 'run-model',
-    RUN_VISION_BASE_URL: 'https://run.example.com/v1',
-  })
-  assert.equal(runEnv.apiKey, 'run-key')
-  assert.equal(runEnv.model, 'run-model')
-  assert.equal(runEnv.baseUrl, 'https://run.example.com/v1')
-
   const precedence = cfg({
     VISIONPOWER_API_KEY: 'visionpower-key',
-    RUN_VISION_API_KEY: 'run-key',
     OPENAI_API_KEY: 'openai-key',
     VISIONPOWER_MODEL: 'visionpower-model',
-    RUN_VISION_MODEL: 'run-model',
     VISIONPOWER_BASE_URL: 'https://visionpower.example.com/v1',
-    RUN_VISION_BASE_URL: 'https://run.example.com/v1',
   })
   assert.equal(precedence.apiKey, 'visionpower-key')
   assert.equal(precedence.model, 'visionpower-model')
@@ -264,18 +252,17 @@ try {
   assert.throws(() => cfg({ VISIONPOWER_API_KEY: 'k', VISIONPOWER_MAX_RETRIES: '-1' }), /non-negative integer/)
   assert.throws(() => cfg({ VISIONPOWER_API_KEY: 'k', VISIONPOWER_DEBUG: 'maybe' }), /must be a boolean/)
   assert.throws(() => cfg({
-    RUN_VISION_API_KEY: 'k',
-    RUN_VISION_BASE_URL: 'https://api.example.com/v1/chat/completions',
+    VISIONPOWER_API_KEY: 'k',
+    VISIONPOWER_BASE_URL: 'https://api.example.com/v1/chat/completions',
   }), /should not include/)
   assert.throws(() => cfg({
     VISIONPOWER_API_KEY: 'k',
     VISIONPOWER_BASE_URL: 'file:///tmp/model',
   }), /VISIONPOWER_BASE_URL must use http or https/)
-  assert.throws(() => cfg({ RUN_VISION_API_KEY: 'k', RUN_VISION_MAX_TOKENS: '20abc' }), /positive integer/)
+  assert.throws(() => cfg({ VISIONPOWER_API_KEY: 'k', VISIONPOWER_MAX_TOKENS: '20abc' }), /positive integer/)
   assert.throws(() => cfg({
     VISIONPOWER_API_KEY: 'k',
     VISIONPOWER_TIMEOUT_MS: 'later',
-    RUN_VISION_TIMEOUT_MS: '60000',
   }), /VISIONPOWER_TIMEOUT_MS must be a positive integer/)
 
   // --- Persistent config file (env still wins over it) ---

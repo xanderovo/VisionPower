@@ -1,31 +1,33 @@
 # VisionPower
 
 [![中文](https://img.shields.io/badge/Language-%E4%B8%AD%E6%96%87-red)](./README.md)
+[![npm](https://img.shields.io/npm/v/visionpower)](https://www.npmjs.com/package/visionpower)
 
-VisionPower is a portable image-understanding MCP server for Codex, Claude Desktop, Cursor, Cline, and other MCP-compatible agents.
-
-It exposes one tool:
-
-- `describe_image`: analyze a local image path, image URL, or base64 image with an OpenAI-compatible vision model.
+VisionPower is an image-understanding MCP server for Codex, Claude Desktop, Cursor, Cline, and other agent apps. Once configured, your agent can call `describe_image` to understand images, read screenshot text, inspect charts, and describe visual content.
 
 VisionPower defaults to Qwen VL through Alibaba Cloud Model Studio / DashScope's OpenAI-compatible endpoint. You can replace the model and base URL with any vision-capable OpenAI-compatible provider.
+
+## Choose A Setup Path
+
+| What you want | Recommended path | Best for |
+| --- | --- | --- |
+| You do not want to edit config manually | [Path 1: ask your agent to install it](#path-1-ask-your-agent-to-install-it) | Codex, Cursor, Claude Code, and agents that can edit config/run commands |
+| Your app uses MCP JSON config | [Path 2: MCP JSON config](#path-2-mcp-json-config) | Claude Desktop, Cursor, Cline, Cherry Studio, and similar apps |
+| You use Codex | [Path 3: Codex TOML config](#path-3-codex-toml-config) | Codex CLI / Codex desktop config |
+| You are in a restricted network or want long-term stability | [Path 4: install locally first](#path-4-install-locally-first) | Users who prefer a local executable instead of repeated `npx` resolution |
 
 ## Requirements
 
 - Node.js 18 or newer
 - A vision-capable OpenAI-compatible API key
 
-Alibaba Cloud Model Studio / Bailian:
+Alibaba Cloud Model Studio / Bailian API Key page:
 
-- API Key page: https://bailian.console.aliyun.com/?tab=model#/api-key
+https://bailian.console.aliyun.com/?tab=model#/api-key
 
-## Quick Start
+## Path 1: ask your agent to install it
 
-Choose one installation channel based on your network.
-
-### 1. Easiest: ask your agent to install it for you
-
-If your agent can edit its own MCP configuration, send it this instruction and let it install/configure VisionPower automatically:
+This is the lowest-friction path. Send the following instruction to your agent and let it choose the right config format, write the MCP config, and test the tool.
 
 ```text
 Please install and configure VisionPower MCP for me.
@@ -34,16 +36,26 @@ My vision model API key is: your-api-key
 Use this model: qwen3-vl-flash
 Use this base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
 
-If the official npm registry is stable in this environment, use npx -y visionpower.
-If this environment is in mainland China without VPN, prefer npx -y --registry=https://registry.npmmirror.com visionpower.
-If npx startup seems unstable, first run npm install -g visionpower --registry=https://registry.npmmirror.com, then configure the MCP command as visionpower.
+If the official npm registry is stable in this environment, use:
+npx -y visionpower
+
+If access to the official npm registry is unstable, or this environment is on a mainland China network, prefer:
+npx -y --registry=https://registry.npmmirror.com visionpower
+
+If npx startup seems unstable, first run:
+npm install -g visionpower --registry=https://registry.npmmirror.com
+Then configure the MCP command as visionpower.
 
 Please write the MCP configuration in the format required by the current agent and confirm that the describe_image tool is available.
 ```
 
-### 2. Users with VPN or stable npm access
+## Path 2: MCP JSON config
 
-Use the official npm registry:
+Use this for tools that configure MCP servers with JSON, such as Claude Desktop, Cursor, Cline, and Cherry Studio.
+
+### 2.1 Official npm registry
+
+Use this if access to the official npm registry is stable.
 
 ```json
 {
@@ -61,9 +73,9 @@ Use the official npm registry:
 }
 ```
 
-### 3. Users in mainland China without VPN: npm mirror
+### 2.2 Mainland China npm mirror
 
-Use npmmirror for the first download:
+Use this if access to the official npm registry is unstable, or the environment is on a mainland China network. This tells `npx` to fetch VisionPower from npmmirror.
 
 ```json
 {
@@ -81,17 +93,57 @@ Use npmmirror for the first download:
 }
 ```
 
-### 4. Users in mainland China without VPN: install locally first
+## Path 3: Codex TOML config
 
-This is the most stable option for long-term use.
+Codex uses TOML instead of JSON. Add one of the following blocks to `~/.codex/config.toml`.
 
-Install VisionPower globally:
+### 3.1 Official npm registry
+
+```toml
+[mcp_servers."visionpower"]
+type = "stdio"
+command = "npx"
+args = ["-y", "visionpower"]
+
+[mcp_servers."visionpower".env]
+RUN_VISION_API_KEY = "your-api-key"
+RUN_VISION_MODEL = "qwen3-vl-flash"
+RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+```
+
+### 3.2 Mainland China npm mirror
+
+```toml
+[mcp_servers."visionpower"]
+type = "stdio"
+command = "npx"
+args = ["-y", "--registry=https://registry.npmmirror.com", "visionpower"]
+
+[mcp_servers."visionpower".env]
+RUN_VISION_API_KEY = "your-api-key"
+RUN_VISION_MODEL = "qwen3-vl-flash"
+RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+```
+
+## Path 4: install locally first
+
+This is the most stable option for restricted networks and long-term use. Install VisionPower globally, then configure MCP to run the local command.
+
+### 4.1 Install
+
+Recommended for mainland China:
 
 ```bash
 npm install -g visionpower --registry=https://registry.npmmirror.com
 ```
 
-Then configure your agent to run the local command:
+Official npm registry:
+
+```bash
+npm install -g visionpower
+```
+
+### 4.2 JSON config
 
 ```json
 {
@@ -109,51 +161,7 @@ Then configure your agent to run the local command:
 }
 ```
 
-If a GUI agent cannot find `visionpower`, run:
-
-```bash
-which visionpower
-```
-
-Then replace `command` with the absolute path, for example:
-
-```json
-"command": "/opt/homebrew/bin/visionpower"
-```
-
-## Codex TOML Configuration
-
-Codex uses TOML instead of JSON.
-
-Official npm registry:
-
-```toml
-[mcp_servers."visionpower"]
-type = "stdio"
-command = "npx"
-args = ["-y", "visionpower"]
-
-[mcp_servers."visionpower".env]
-RUN_VISION_API_KEY = "your-api-key"
-RUN_VISION_MODEL = "qwen3-vl-flash"
-RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-```
-
-Mainland China mirror:
-
-```toml
-[mcp_servers."visionpower"]
-type = "stdio"
-command = "npx"
-args = ["-y", "--registry=https://registry.npmmirror.com", "visionpower"]
-
-[mcp_servers."visionpower".env]
-RUN_VISION_API_KEY = "your-api-key"
-RUN_VISION_MODEL = "qwen3-vl-flash"
-RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-```
-
-Local global install:
+### 4.3 Codex TOML config
 
 ```toml
 [mcp_servers."visionpower"]
@@ -167,11 +175,21 @@ RUN_VISION_MODEL = "qwen3-vl-flash"
 RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-## Model And Base URL Options
+If a GUI app such as Claude Desktop or Cursor cannot find `visionpower`, run:
 
-`RUN_VISION_MODEL` and `RUN_VISION_BASE_URL` are just defaults. You can replace them in the JSON/TOML configuration with any vision-capable OpenAI-compatible model and endpoint.
+```bash
+which visionpower
+```
 
-Common options:
+Then replace `command` with the absolute path, for example:
+
+```json
+"command": "/opt/homebrew/bin/visionpower"
+```
+
+## Models And Base URLs
+
+You can replace `RUN_VISION_MODEL` and `RUN_VISION_BASE_URL`. Any provider that supports OpenAI-compatible `/chat/completions` vision input can be used with VisionPower.
 
 | Provider | `RUN_VISION_MODEL` | `RUN_VISION_BASE_URL` | Notes |
 | --- | --- | --- | --- |
@@ -182,7 +200,7 @@ Common options:
 | OpenAI | `gpt-4o-mini` | `https://api.openai.com/v1` | Lower-cost OpenAI option. |
 | Other OpenAI-compatible provider | provider model ID | provider `/v1` base URL | Replace both fields with your provider's model and endpoint. |
 
-Example: OpenAI configuration:
+OpenAI example:
 
 ```json
 {
@@ -200,7 +218,7 @@ Example: OpenAI configuration:
 }
 ```
 
-Example: custom OpenAI-compatible provider:
+Custom OpenAI-compatible provider example:
 
 ```json
 {
@@ -266,7 +284,7 @@ npm install
 npm run smoke
 ```
 
-Start the server directly:
+Start the MCP server directly:
 
 ```bash
 npm start
@@ -274,6 +292,6 @@ npm start
 
 ## Notes
 
-- The first `npx` run downloads VisionPower. After that, npm usually uses local cache, but network checks may still happen.
-- Global install is more stable for long-term use in restricted network environments.
+- The first `npx` run downloads VisionPower. After that, npm usually uses local cache, but network resolution may still happen.
+- Global install is more stable for restricted networks and long-term use.
 - Model availability depends on your provider account, region, and permissions. If a model is unavailable, replace `RUN_VISION_MODEL` with another vision-capable model exposed by your provider.

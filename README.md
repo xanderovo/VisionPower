@@ -1,31 +1,33 @@
 # VisionPower
 
 [![English](https://img.shields.io/badge/Language-English-blue)](./README.en.md)
+[![npm](https://img.shields.io/npm/v/visionpower)](https://www.npmjs.com/package/visionpower)
 
-VisionPower 是一个可直接配置到 Codex、Claude Desktop、Cursor、Cline 等 Agent 程序里的图片理解 MCP。它可以让原本不支持看图的 Agent 通过工具调用识别图片、读取截图文字、分析图表和描述视觉内容。
+VisionPower 是一个图片理解 MCP。把它配置到 Codex、Claude Desktop、Cursor、Cline 等 Agent 程序后，Agent 就可以通过 `describe_image` 工具识别图片、读取截图文字、分析图表和描述视觉内容。
 
-它提供一个 MCP 工具：
+默认配置使用阿里云百炼 / DashScope 的 Qwen VL OpenAI-compatible 接口。你也可以把模型和 Base URL 替换成任何支持视觉能力的 OpenAI-compatible 服务。
 
-- `describe_image`：使用 OpenAI-compatible 视觉模型分析本地图片路径、图片 URL 或 base64 图片。
+## 选择安装方式
 
-VisionPower 默认使用阿里云百炼 / DashScope 的 Qwen VL OpenAI-compatible 接口。你也可以在 JSON / TOML 配置中把模型和 Base URL 替换成任何支持视觉能力的 OpenAI-compatible 服务。
+| 你想怎么用 | 推荐方式 | 适合谁 |
+| --- | --- | --- |
+| 不想手动改配置 | [方式 1：把安装指令交给 Agent](#方式-1把安装指令交给-agent) | Codex、Cursor、Claude Code 等能修改配置/运行命令的 Agent 用户 |
+| 你的工具吃 JSON MCP 配置 | [方式 2：MCP JSON 配置](#方式-2mcp-json-配置) | Claude Desktop、Cursor、Cline、Cherry Studio 等 |
+| 你用 Codex | [方式 3：Codex TOML 配置](#方式-3codex-toml-配置) | Codex CLI / Codex 桌面配置 |
+| 国内网络或长期使用 | [方式 4：先安装到本地再配置](#方式-4先安装到本地再配置) | 希望启动更稳定、不想每次走 `npx` 解析的用户 |
 
 ## 准备工作
 
 - Node.js 18 或更高版本
 - 一个支持视觉模型的 OpenAI-compatible API Key
 
-阿里云百炼：
+阿里云百炼 API Key 页面：
 
-- API Key 页面：https://bailian.console.aliyun.com/?tab=model#/api-key
+https://bailian.console.aliyun.com/?tab=model#/api-key
 
-## 快速开始
+## 方式 1：把安装指令交给 Agent
 
-根据你的网络环境选择一种安装渠道。
-
-### 1. 最简单：把安装指令交给 Agent
-
-如果你的 Agent 能编辑自己的 MCP 配置，可以直接把下面这段话发给它，让它自动完成安装和配置：
+这是最省事的路径。把下面这段话发给你的 Agent，让它自己判断配置格式、写入 MCP 配置并测试工具。
 
 ```text
 请帮我安装并配置 VisionPower MCP。
@@ -34,16 +36,26 @@ VisionPower 默认使用阿里云百炼 / DashScope 的 Qwen VL OpenAI-compatibl
 模型使用：qwen3-vl-flash
 Base URL 使用：https://dashscope.aliyuncs.com/compatible-mode/v1
 
-如果当前环境访问 npm 官方源稳定，请用 npx -y visionpower。
-如果当前环境在中国大陆且没有 VPN，请优先用 npx -y --registry=https://registry.npmmirror.com visionpower。
-如果你判断 npx 启动不稳定，请先运行 npm install -g visionpower --registry=https://registry.npmmirror.com，再把 MCP command 配成 visionpower。
+如果当前环境访问 npm 官方源稳定，请使用：
+npx -y visionpower
 
-请根据当前 Agent 的配置格式写入 MCP 配置，并确认工具名 describe_image 可用。
+如果当前环境访问 npm 官方源不稳定，或位于中国大陆网络环境，请优先使用：
+npx -y --registry=https://registry.npmmirror.com visionpower
+
+如果你判断 npx 启动不稳定，请先运行：
+npm install -g visionpower --registry=https://registry.npmmirror.com
+然后把 MCP command 配成 visionpower。
+
+请根据当前 Agent 的配置格式写入 MCP 配置，并确认 describe_image 工具可用。
 ```
 
-### 2. 有 VPN 或 npm 官方源访问稳定的用户
+## 方式 2：MCP JSON 配置
 
-使用 npm 官方源：
+适用于 Claude Desktop、Cursor、Cline、Cherry Studio 等使用 JSON 格式配置 MCP 的工具。
+
+### 2.1 官方 npm 源
+
+适合 npm 官方源访问稳定的用户。
 
 ```json
 {
@@ -61,9 +73,9 @@ Base URL 使用：https://dashscope.aliyuncs.com/compatible-mode/v1
 }
 ```
 
-### 3. 没有 VPN 的国内用户：使用 npm 镜像
+### 2.2 国内 npm 镜像
 
-使用 npmmirror 作为首次下载渠道：
+适合 npm 官方源访问不稳定，或位于中国大陆网络环境的用户。这个配置会让 `npx` 从 npmmirror 拉取 VisionPower。
 
 ```json
 {
@@ -81,17 +93,57 @@ Base URL 使用：https://dashscope.aliyuncs.com/compatible-mode/v1
 }
 ```
 
-### 4. 没有 VPN 的国内用户：先下载到本地
+## 方式 3：Codex TOML 配置
 
-这是长期使用最稳定的方式。
+Codex 使用 TOML，不是 JSON。把下面内容写入 `~/.codex/config.toml`。
 
-先全局安装 VisionPower：
+### 3.1 官方 npm 源
+
+```toml
+[mcp_servers."visionpower"]
+type = "stdio"
+command = "npx"
+args = ["-y", "visionpower"]
+
+[mcp_servers."visionpower".env]
+RUN_VISION_API_KEY = "填写你的 API Key"
+RUN_VISION_MODEL = "qwen3-vl-flash"
+RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+```
+
+### 3.2 国内 npm 镜像
+
+```toml
+[mcp_servers."visionpower"]
+type = "stdio"
+command = "npx"
+args = ["-y", "--registry=https://registry.npmmirror.com", "visionpower"]
+
+[mcp_servers."visionpower".env]
+RUN_VISION_API_KEY = "填写你的 API Key"
+RUN_VISION_MODEL = "qwen3-vl-flash"
+RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+```
+
+## 方式 4：先安装到本地再配置
+
+这是国内网络和长期使用最稳定的方式。先把 VisionPower 安装到本机，再让 MCP 配置直接运行本地命令。
+
+### 4.1 安装
+
+国内用户推荐：
 
 ```bash
 npm install -g visionpower --registry=https://registry.npmmirror.com
 ```
 
-然后把 Agent 配置为直接运行本地命令：
+官方 npm 源：
+
+```bash
+npm install -g visionpower
+```
+
+### 4.2 JSON 工具配置
 
 ```json
 {
@@ -109,51 +161,7 @@ npm install -g visionpower --registry=https://registry.npmmirror.com
 }
 ```
 
-如果 Claude Desktop、Cursor 这类 GUI 应用找不到 `visionpower` 命令，先在终端运行：
-
-```bash
-which visionpower
-```
-
-然后把 `command` 改成绝对路径，例如：
-
-```json
-"command": "/opt/homebrew/bin/visionpower"
-```
-
-## Codex 配置
-
-Codex 使用 TOML，不是 JSON。
-
-npm 官方源：
-
-```toml
-[mcp_servers."visionpower"]
-type = "stdio"
-command = "npx"
-args = ["-y", "visionpower"]
-
-[mcp_servers."visionpower".env]
-RUN_VISION_API_KEY = "填写你的 API Key"
-RUN_VISION_MODEL = "qwen3-vl-flash"
-RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-```
-
-国内 npm 镜像：
-
-```toml
-[mcp_servers."visionpower"]
-type = "stdio"
-command = "npx"
-args = ["-y", "--registry=https://registry.npmmirror.com", "visionpower"]
-
-[mcp_servers."visionpower".env]
-RUN_VISION_API_KEY = "填写你的 API Key"
-RUN_VISION_MODEL = "qwen3-vl-flash"
-RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-```
-
-本地全局安装：
+### 4.3 Codex TOML 配置
 
 ```toml
 [mcp_servers."visionpower"]
@@ -167,11 +175,21 @@ RUN_VISION_MODEL = "qwen3-vl-flash"
 RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-## 可选模型和 Base URL
+如果 Claude Desktop、Cursor 这类 GUI 应用找不到 `visionpower` 命令，先在终端运行：
 
-`RUN_VISION_MODEL` 和 `RUN_VISION_BASE_URL` 只是默认配置。你可以在 JSON / TOML 里替换成任何支持视觉能力的 OpenAI-compatible 模型和接口地址。
+```bash
+which visionpower
+```
 
-常用选项：
+然后把 `command` 改成绝对路径，例如：
+
+```json
+"command": "/opt/homebrew/bin/visionpower"
+```
+
+## 模型和 Base URL
+
+`RUN_VISION_MODEL` 和 `RUN_VISION_BASE_URL` 可以替换。只要你的服务商兼容 OpenAI 的 `/chat/completions` 视觉输入格式，就可以配置到 VisionPower。
 
 | 服务商 | `RUN_VISION_MODEL` | `RUN_VISION_BASE_URL` | 说明 |
 | --- | --- | --- | --- |

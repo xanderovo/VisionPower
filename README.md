@@ -1,30 +1,32 @@
 # VisionPower
 
-VisionPower is a portable image-understanding MCP server for Codex, Claude Desktop, Cursor, Cline, and other MCP-compatible agents.
+[![English](https://img.shields.io/badge/Language-English-blue)](./README.en.md)
 
-It exposes one tool:
+VisionPower 是一个可直接配置到 Codex、Claude Desktop、Cursor、Cline 等 Agent 程序里的图片理解 MCP。它可以让原本不支持看图的 Agent 通过工具调用识别图片、读取截图文字、分析图表和描述视觉内容。
 
-- `describe_image`: analyze a local image path, image URL, or base64 image with an OpenAI-compatible vision model.
+它提供一个 MCP 工具：
 
-VisionPower defaults to Qwen VL through Alibaba Cloud Model Studio / DashScope's OpenAI-compatible endpoint. You can replace the model and base URL with any vision-capable OpenAI-compatible provider.
+- `describe_image`：使用 OpenAI-compatible 视觉模型分析本地图片路径、图片 URL 或 base64 图片。
 
-## Requirements
+VisionPower 默认使用阿里云百炼 / DashScope 的 Qwen VL OpenAI-compatible 接口。你也可以在 JSON / TOML 配置中把模型和 Base URL 替换成任何支持视觉能力的 OpenAI-compatible 服务。
 
-- Node.js 18 or newer
-- A vision-capable OpenAI-compatible API key
+## 准备工作
 
-Alibaba Cloud Model Studio / Bailian:
+- Node.js 18 或更高版本
+- 一个支持视觉模型的 OpenAI-compatible API Key
 
-- Official console: https://bailian.console.aliyun.com/cn-beijing#/home
-- API Key page: https://bailian.console.aliyun.com/?tab=model#/api-key
+阿里云百炼：
 
-## Quick Start
+- 官网控制台：https://bailian.console.aliyun.com/cn-beijing#/home
+- API Key 页面：https://bailian.console.aliyun.com/?tab=model#/api-key
 
-Choose one installation channel based on your network.
+## 快速开始
 
-### 1. Users with VPN or stable npm access
+根据你的网络环境选择一种安装渠道。
 
-Use the official npm registry:
+### 1. 有 VPN 或 npm 官方源访问稳定的用户
+
+使用 npm 官方源：
 
 ```json
 {
@@ -33,7 +35,7 @@ Use the official npm registry:
       "command": "npx",
       "args": ["-y", "visionpower"],
       "env": {
-        "RUN_VISION_API_KEY": "your-api-key",
+        "RUN_VISION_API_KEY": "填写你的 API Key",
         "RUN_VISION_MODEL": "qwen3-vl-flash",
         "RUN_VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
       }
@@ -42,9 +44,9 @@ Use the official npm registry:
 }
 ```
 
-### 2. Users in mainland China without VPN: npm mirror
+### 2. 没有 VPN 的国内用户：使用 npm 镜像
 
-Use npmmirror for the first download:
+使用 npmmirror 作为首次下载渠道：
 
 ```json
 {
@@ -53,7 +55,7 @@ Use npmmirror for the first download:
       "command": "npx",
       "args": ["-y", "--registry=https://registry.npmmirror.com", "visionpower"],
       "env": {
-        "RUN_VISION_API_KEY": "your-api-key",
+        "RUN_VISION_API_KEY": "填写你的 API Key",
         "RUN_VISION_MODEL": "qwen3-vl-flash",
         "RUN_VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
       }
@@ -62,17 +64,17 @@ Use npmmirror for the first download:
 }
 ```
 
-### 3. Users in mainland China without VPN: install locally first
+### 3. 没有 VPN 的国内用户：先下载到本地
 
-This is the most stable option for long-term use.
+这是长期使用最稳定的方式。
 
-Install VisionPower globally:
+先全局安装 VisionPower：
 
 ```bash
 npm install -g visionpower --registry=https://registry.npmmirror.com
 ```
 
-Then configure your agent to run the local command:
+然后把 Agent 配置为直接运行本地命令：
 
 ```json
 {
@@ -81,7 +83,7 @@ Then configure your agent to run the local command:
       "command": "visionpower",
       "args": [],
       "env": {
-        "RUN_VISION_API_KEY": "your-api-key",
+        "RUN_VISION_API_KEY": "填写你的 API Key",
         "RUN_VISION_MODEL": "qwen3-vl-flash",
         "RUN_VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
       }
@@ -90,23 +92,23 @@ Then configure your agent to run the local command:
 }
 ```
 
-If a GUI agent cannot find `visionpower`, run:
+如果 Claude Desktop、Cursor 这类 GUI 应用找不到 `visionpower` 命令，先在终端运行：
 
 ```bash
 which visionpower
 ```
 
-Then replace `command` with the absolute path, for example:
+然后把 `command` 改成绝对路径，例如：
 
 ```json
 "command": "/opt/homebrew/bin/visionpower"
 ```
 
-## Codex TOML Configuration
+## Codex 配置
 
-Codex uses TOML instead of JSON.
+Codex 使用 TOML，不是 JSON。
 
-Official npm registry:
+npm 官方源：
 
 ```toml
 [mcp_servers."visionpower"]
@@ -115,12 +117,12 @@ command = "npx"
 args = ["-y", "visionpower"]
 
 [mcp_servers."visionpower".env]
-RUN_VISION_API_KEY = "your-api-key"
+RUN_VISION_API_KEY = "填写你的 API Key"
 RUN_VISION_MODEL = "qwen3-vl-flash"
 RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-Mainland China mirror:
+国内 npm 镜像：
 
 ```toml
 [mcp_servers."visionpower"]
@@ -129,12 +131,12 @@ command = "npx"
 args = ["-y", "--registry=https://registry.npmmirror.com", "visionpower"]
 
 [mcp_servers."visionpower".env]
-RUN_VISION_API_KEY = "your-api-key"
+RUN_VISION_API_KEY = "填写你的 API Key"
 RUN_VISION_MODEL = "qwen3-vl-flash"
 RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-Local global install:
+本地全局安装：
 
 ```toml
 [mcp_servers."visionpower"]
@@ -143,27 +145,27 @@ command = "visionpower"
 args = []
 
 [mcp_servers."visionpower".env]
-RUN_VISION_API_KEY = "your-api-key"
+RUN_VISION_API_KEY = "填写你的 API Key"
 RUN_VISION_MODEL = "qwen3-vl-flash"
 RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-## Model And Base URL Options
+## 可选模型和 Base URL
 
-`RUN_VISION_MODEL` and `RUN_VISION_BASE_URL` are just defaults. You can replace them in the JSON/TOML configuration with any vision-capable OpenAI-compatible model and endpoint.
+`RUN_VISION_MODEL` 和 `RUN_VISION_BASE_URL` 只是默认配置。你可以在 JSON / TOML 里替换成任何支持视觉能力的 OpenAI-compatible 模型和接口地址。
 
-Common options:
+常用选项：
 
-| Provider | `RUN_VISION_MODEL` | `RUN_VISION_BASE_URL` | Notes |
+| 服务商 | `RUN_VISION_MODEL` | `RUN_VISION_BASE_URL` | 说明 |
 | --- | --- | --- | --- |
-| Alibaba Cloud Model Studio / DashScope | `qwen3-vl-flash` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | Default. Fast and cost-effective for image understanding. |
-| Alibaba Cloud Model Studio / DashScope | `qwen3-vl-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | Higher quality Qwen VL option, subject to account/model availability. |
-| Alibaba Cloud Model Studio / DashScope | `qwen3.6-flash` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | Use if this multimodal model is available in your Bailian account. |
-| OpenAI | `gpt-4o` | `https://api.openai.com/v1` | Strong general image understanding. |
-| OpenAI | `gpt-4o-mini` | `https://api.openai.com/v1` | Lower-cost OpenAI option. |
-| Other OpenAI-compatible provider | provider model ID | provider `/v1` base URL | Replace both fields with your provider's model and endpoint. |
+| 阿里云百炼 / DashScope | `qwen3-vl-flash` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 默认选项，适合快速图片理解。 |
+| 阿里云百炼 / DashScope | `qwen3-vl-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 更高质量的 Qwen VL 选项，取决于你的账号权限。 |
+| 阿里云百炼 / DashScope | `qwen3.6-flash` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 如果你的百炼账号可用该多模态模型，可以直接替换。 |
+| OpenAI | `gpt-4o` | `https://api.openai.com/v1` | 通用视觉理解能力强。 |
+| OpenAI | `gpt-4o-mini` | `https://api.openai.com/v1` | 成本更低的 OpenAI 选项。 |
+| 其他 OpenAI-compatible 服务 | 服务商提供的模型 ID | 服务商提供的 `/v1` Base URL | 把模型名和接口地址替换成你的服务商配置即可。 |
 
-Example: OpenAI configuration:
+OpenAI 示例：
 
 ```json
 {
@@ -172,7 +174,7 @@ Example: OpenAI configuration:
       "command": "npx",
       "args": ["-y", "visionpower"],
       "env": {
-        "RUN_VISION_API_KEY": "your-openai-api-key",
+        "RUN_VISION_API_KEY": "填写你的 OpenAI API Key",
         "RUN_VISION_MODEL": "gpt-4o",
         "RUN_VISION_BASE_URL": "https://api.openai.com/v1"
       }
@@ -181,7 +183,7 @@ Example: OpenAI configuration:
 }
 ```
 
-Example: custom OpenAI-compatible provider:
+自定义 OpenAI-compatible 服务示例：
 
 ```json
 {
@@ -190,7 +192,7 @@ Example: custom OpenAI-compatible provider:
       "command": "npx",
       "args": ["-y", "visionpower"],
       "env": {
-        "RUN_VISION_API_KEY": "your-provider-api-key",
+        "RUN_VISION_API_KEY": "填写你的服务商 API Key",
         "RUN_VISION_MODEL": "your-vision-model-name",
         "RUN_VISION_BASE_URL": "https://your-provider.example.com/v1"
       }
@@ -199,62 +201,62 @@ Example: custom OpenAI-compatible provider:
 }
 ```
 
-## Environment Variables
+## 环境变量
 
-| Name | Required | Default | Description |
+| 名称 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `RUN_VISION_API_KEY` | Yes | | API key for the configured vision provider. |
-| `RUN_VISION_MODEL` | No | `qwen3-vl-flash` | Vision model name. |
-| `RUN_VISION_BASE_URL` | No | `https://dashscope.aliyuncs.com/compatible-mode/v1` | OpenAI-compatible base URL without `/chat/completions`. |
-| `RUN_VISION_MAX_IMAGE_BYTES` | No | `20971520` | Max local image size in bytes. |
-| `RUN_VISION_TIMEOUT_MS` | No | `60000` | Upstream API timeout. |
-| `RUN_VISION_MAX_TOKENS` | No | `2048` | Max response tokens. |
+| `RUN_VISION_API_KEY` | 是 | | 视觉模型服务商的 API Key。 |
+| `RUN_VISION_MODEL` | 否 | `qwen3-vl-flash` | 视觉模型名称。 |
+| `RUN_VISION_BASE_URL` | 否 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | OpenAI-compatible Base URL，不要包含 `/chat/completions`。 |
+| `RUN_VISION_MAX_IMAGE_BYTES` | 否 | `20971520` | 本地图片最大字节数。 |
+| `RUN_VISION_TIMEOUT_MS` | 否 | `60000` | 上游接口超时时间。 |
+| `RUN_VISION_MAX_TOKENS` | 否 | `2048` | 最大输出 token 数。 |
 
-## Tool Input
+## 工具输入
 
-Local image path:
+本地图片路径：
 
 ```json
 {
   "image_path": "/absolute/path/to/image.png",
-  "prompt": "Read the text in this screenshot and summarize it."
+  "prompt": "读取这张截图里的文字并总结。"
 }
 ```
 
-Image URL:
+图片 URL：
 
 ```json
 {
   "image_url": "https://example.com/image.png",
-  "prompt": "What is in this image?"
+  "prompt": "这张图片里有什么？"
 }
 ```
 
-Base64 image:
+Base64 图片：
 
 ```json
 {
   "image_base64": "...",
   "image_mime_type": "image/png",
-  "prompt": "Extract all visible text."
+  "prompt": "提取所有可见文字。"
 }
 ```
 
-## Local Development
+## 本地开发
 
 ```bash
 npm install
 npm run smoke
 ```
 
-Start the server directly:
+直接启动 MCP server：
 
 ```bash
 npm start
 ```
 
-## Notes
+## 说明
 
-- The first `npx` run downloads VisionPower. After that, npm usually uses local cache, but network checks may still happen.
-- Global install is more stable for long-term use in restricted network environments.
-- Model availability depends on your provider account, region, and permissions. If a model is unavailable, replace `RUN_VISION_MODEL` with another vision-capable model exposed by your provider.
+- 第一次使用 `npx` 会下载 VisionPower。下载成功后 npm 通常会使用本地缓存，但仍可能进行网络解析。
+- 国内网络或长期使用场景，推荐先全局安装再配置本地命令。
+- 模型是否可用取决于你的服务商账号、地域和权限。如果某个模型不可用，把 `RUN_VISION_MODEL` 替换成你的服务商提供的其他视觉模型即可。

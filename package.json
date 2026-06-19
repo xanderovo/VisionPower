@@ -1,10 +1,10 @@
 {
-  "name": "@runhua/vision-mcp",
-  "version": "0.1.0",
-  "description": "Vision++ MCP: a portable image understanding MCP server for Codex, Claude Desktop, Cursor, and other agents.",
+  "name": "visionpower",
+  "version": "0.1.1",
+  "description": "VisionPower: a portable image understanding MCP server for Codex, Claude Desktop, Cursor, and other agents.",
   "type": "module",
   "bin": {
-    "vision-mcp": "./src/index.js"
+    "visionpower": "./src/index.js"
   },
   "files": [
     "src",

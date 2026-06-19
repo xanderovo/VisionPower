@@ -1,6 +1,6 @@
-# Vision++ MCP
+# VisionPower
 
-Vision++ MCP is a portable image-understanding MCP server for Codex, Claude Desktop, Cursor, Cline, and other MCP-compatible agents.
+VisionPower is a portable image-understanding MCP server for Codex, Claude Desktop, Cursor, Cline, and other MCP-compatible agents.
 
 It exposes one tool:
 
@@ -32,12 +32,12 @@ Environment variables:
 Add this to `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers."vision-mcp"]
+[mcp_servers."visionpower"]
 type = "stdio"
 command = "npx"
-args = ["-y", "github:RunhuaHuang/vision-mcp#v0.1.0"]
+args = ["-y", "github:RunhuaHuang/VisionPower#v0.1.1"]
 
-[mcp_servers."vision-mcp".env]
+[mcp_servers."visionpower".env]
 RUN_VISION_API_KEY = "your-api-key"
 RUN_VISION_MODEL = "qwen3-vl-flash"
 RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -51,9 +51,9 @@ Add this to the app's MCP configuration:
 ```json
 {
   "mcpServers": {
-    "vision-mcp": {
+    "visionpower": {
       "command": "npx",
-      "args": ["-y", "github:RunhuaHuang/vision-mcp#v0.1.0"],
+      "args": ["-y", "github:RunhuaHuang/VisionPower#v0.1.1"],
       "env": {
         "RUN_VISION_API_KEY": "your-api-key",
         "RUN_VISION_MODEL": "qwen3-vl-flash",
@@ -112,6 +112,12 @@ Start the server directly:
 
 ```bash
 npm start
+```
+
+After npm publication, you can replace the GitHub install target with:
+
+```json
+["-y", "visionpower"]
 ```
 
 ## Security Notes

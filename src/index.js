@@ -7,9 +7,9 @@ import { loadVisionConfig } from './config.js'
 import { describeImage } from './vision-core.js'
 
 const server = new McpServer({
-  name: 'vision-plus-plus-mcp',
-  title: 'Vision++ MCP',
-  version: '0.1.0',
+  name: 'visionpower',
+  title: 'VisionPower',
+  version: '0.1.1',
 })
 
 server.registerTool(
@@ -42,7 +42,7 @@ server.registerTool(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       return {
-        content: [{ type: 'text', text: `Vision++ MCP failed: ${message}` }],
+        content: [{ type: 'text', text: `VisionPower failed: ${message}` }],
         isError: true,
       }
     }
@@ -55,6 +55,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Vision++ MCP server error:', error)
+  console.error('VisionPower server error:', error)
   process.exit(1)
 })

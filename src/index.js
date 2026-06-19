@@ -2,40 +2,41 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import * as z from 'zod/v4'
 import { loadVisionConfig } from './config.js'
 import { describeImage } from './vision-core.js'
+import { toolInputSchemaShape } from './schema.js'
 
 const server = new McpServer({
   name: 'visionpower',
   title: 'VisionPower',
-  version: '0.1.2',
+  version: '1.2.5',
 })
 
 server.registerTool(
   'describe_image',
   {
     title: 'Describe Image',
-    description: 'Analyze an image with an OpenAI-compatible vision model. Supports local image_path, image_url, or image_base64.',
-    inputSchema: {
-      image_path: z.string().optional().describe('Absolute path to a local raster image file. Use this when the image is available on disk.'),
-      image_url: z.string().url().optional().describe('URL of an image that the configured vision model provider can access.'),
-      image_base64: z.string().optional().describe('Base64-encoded image data without a data: URI prefix.'),
-      image_mime_type: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp']).optional().describe('MIME type for image_base64. Defaults to image/jpeg.'),
-      prompt: z.string().optional().describe('Specific question or instruction about the image. Leave empty for a full description.'),
-    },
+    description: 'Analyze one or more images with an OpenAI-compatible vision model. Supports local image_path, image_url, image_base64, or ordered images[].',
+    inputSchema: toolInputSchemaShape,
   },
   async (args) => {
     try {
-      if (!args.image_path && !args.image_url && !args.image_base64) {
+      const params = args ?? {}
+      // The MCP SDK has already validated `args` against the registered input
+      // schema, so here we only enforce the cross-field rule that at least one
+      // image source is present before reaching out to the provider.
+      if (!params.image_path && !params.image_url && !params.image_base64 && !params.images?.length) {
+        const text = params.image_mime_type
+          ? 'image_mime_type can only be used with image_base64.'
+          : 'Provide one of image_path, image_url, image_base64, or images[].'
         return {
-          content: [{ type: 'text', text: 'Provide one of image_path, image_url, or image_base64.' }],
+          content: [{ type: 'text', text }],
           isError: true,
         }
       }
 
       const config = loadVisionConfig()
-      const text = await describeImage(args, config)
+      const text = await describeImage(params, config)
       return {
         content: [{ type: 'text', text }],
       }

@@ -1,6 +1,6 @@
 {
   "name": "visionpower",
-  "version": "0.1.2",
+  "version": "1.2.5",
   "description": "VisionPower: a portable image understanding MCP server for Codex, Claude Desktop, Cursor, and other agents.",
   "type": "module",
   "bin": {
@@ -8,16 +8,21 @@
   },
   "files": [
     "src",
+    "VisionPower-Skill",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "start": "node src/index.js",
-    "smoke": "node scripts/smoke.mjs"
+    "build:skill": "node scripts/build-skill.mjs --write",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "node scripts/test.mjs"
   },
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "skill",
+    "agent-skill",
     "vision",
     "ocr",
     "image-understanding",

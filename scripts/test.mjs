@@ -1,0 +1,345 @@
+import assert from 'node:assert/strict'
+import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { buildSkillScript } from './build-skill.mjs'
+import { loadVisionConfig, markSkillConfigNeedsSetup, markSkillConfigVerified } from '../src/config.js'
+import { describeImage } from '../src/vision-core.js'
+
+const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const gifBytes = Buffer.from('GIF89a', 'ascii')
+
+function testConfig(overrides = {}) {
+  return {
+    apiKey: 'test-key',
+    model: 'test-model',
+    baseUrl: 'https://api.example.com/v1',
+    allowedDirs: [],
+    maxImageBytes: 20 * 1024 * 1024,
+    requestTimeoutMs: 1000,
+    maxTokens: 128,
+    maxImages: 8,
+    maxRetries: 2,
+    debug: false,
+    ...overrides,
+  }
+}
+
+async function withMockFetch(fn) {
+  const originalFetch = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options, body: JSON.parse(options.body) })
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  try {
+    await fn(calls)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+}
+
+async function withSequencedFetch(responses, fn) {
+  const originalFetch = globalThis.fetch
+  const calls = []
+  let index = 0
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options })
+    const spec = responses[Math.min(index, responses.length - 1)]
+    index += 1
+    return new Response(spec.body, {
+      status: spec.status,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  try {
+    await fn(calls)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+}
+
+async function assertRejectsMessage(fn, pattern) {
+  await assert.rejects(fn, (error) => {
+    assert.match(error.message, pattern)
+    return true
+  })
+}
+
+const tempDir = mkdtempSync(join(tmpdir(), 'visionpower-test-'))
+try {
+  const pngPath = join(tempDir, 'one.png')
+  writeFileSync(pngPath, pngBytes)
+
+  await withMockFetch(async (calls) => {
+    const result = await describeImage({
+      images: [
+        { image_path: pngPath },
+        { image_base64: gifBytes.toString('base64') },
+      ],
+      prompt: 'Extract visible text.',
+    }, testConfig())
+
+    assert.equal(result, 'ok')
+    assert.equal(calls.length, 1)
+    const content = calls[0].body.messages[0].content
+    assert.equal(content[0].text, 'Image 1:')
+    assert.match(content[1].image_url.url, /^data:image\/png;base64,/)
+    assert.equal(content[2].text, 'Image 2:')
+    assert.match(content[3].image_url.url, /^data:image\/gif;base64,/)
+    assert.match(content[4].text, /Return your answer in the same order/)
+  })
+
+  await assertRejectsMessage(
+    () => describeImage({ image_url: 'data:image/png;base64,AAAA' }, testConfig()),
+    /http or https/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_url: 'http://localhost/image.png' }, testConfig()),
+    /publicly reachable/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_url: 'http://[::ffff:127.0.0.1]/image.png' }, testConfig()),
+    /publicly reachable/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_base64: 'not-base64!!!' }, testConfig()),
+    /valid standard base64/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_base64: pngBytes.toString('base64'), image_mime_type: 'image/jpeg' }, testConfig()),
+    /does not match/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_base64: pngBytes.toString('base64') }, testConfig({ maxImageBytes: 3 })),
+    /too large/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ images: [{ image_path: pngPath, image_url: 'https://example.com/a.png' }] }, testConfig()),
+    /exactly one/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_mime_type: 'image/png' }, testConfig()),
+    /can only be used/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_path: pngPath, images: [{ image_base64: gifBytes.toString('base64') }] }, testConfig()),
+    /either images/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_mime_type: 'image/png', images: [{ image_base64: gifBytes.toString('base64') }] }, testConfig()),
+    /either images/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ images: [{ image_path: pngPath }, { image_base64: gifBytes.toString('base64') }] }, testConfig({ maxImages: 1 })),
+    /Too many images/,
+  )
+  await assertRejectsMessage(
+    () => describeImage({ image_path: join(tempDir, 'does-not-exist.png') }, testConfig()),
+    /image_path does not exist/,
+  )
+
+  // Retries: a retryable status recovers on a later attempt.
+  await withSequencedFetch(
+    [
+      { status: 503, body: 'overloaded' },
+      { status: 200, body: JSON.stringify({ choices: [{ message: { content: 'recovered' } }] }) },
+    ],
+    async (calls) => {
+      const result = await describeImage(
+        { image_base64: gifBytes.toString('base64') },
+        testConfig({ maxRetries: 1 }),
+      )
+      assert.equal(result, 'recovered')
+      assert.equal(calls.length, 2)
+    },
+  )
+
+  // Retries are exhausted after maxRetries and the last status surfaces.
+  await withSequencedFetch(
+    [{ status: 503, body: 'still-overloaded' }],
+    async (calls) => {
+      await assertRejectsMessage(
+        () => describeImage({ image_base64: gifBytes.toString('base64') }, testConfig({ maxRetries: 1 })),
+        /failed \(503\)/,
+      )
+      assert.equal(calls.length, 2)
+    },
+  )
+
+  // Non-retryable client errors fail immediately without retrying.
+  await withSequencedFetch(
+    [{ status: 400, body: 'bad request' }],
+    async (calls) => {
+      await assertRejectsMessage(
+        () => describeImage({ image_base64: gifBytes.toString('base64') }, testConfig({ maxRetries: 2 })),
+        /failed \(400\)/,
+      )
+      assert.equal(calls.length, 1)
+    },
+  )
+
+  // --- The generated skill script stays in sync with the core ---
+  const generatedSkill = await buildSkillScript()
+  const committedSkill = readFileSync(new URL('../VisionPower-Skill/describe_image.mjs', import.meta.url), 'utf8')
+  assert.equal(
+    generatedSkill,
+    committedSkill,
+    'VisionPower-Skill/describe_image.mjs is out of date; run `npm run build:skill`',
+  )
+
+  // Env-only resolution must not be affected by a real config file on the test
+  // machine, so point VISIONPOWER_CONFIG at a path that does not exist.
+  const absentConfig = join(tempDir, 'absent-config.json')
+  const cfg = (overrides = {}) => loadVisionConfig({ VISIONPOWER_CONFIG: absentConfig, ...overrides })
+
+  const normalized = cfg({
+    RUN_VISION_API_KEY: 'k',
+    RUN_VISION_BASE_URL: 'https://api.example.com/v1//',
+  })
+  assert.equal(normalized.baseUrl, 'https://api.example.com/v1')
+  assert.equal(normalized.maxImageBytes, 20 * 1024 * 1024)
+
+  const visionpowerEnv = cfg({
+    VISIONPOWER_API_KEY: 'visionpower-key',
+    VISIONPOWER_MODEL: 'visionpower-model',
+    VISIONPOWER_BASE_URL: 'https://visionpower.example.com/v1/',
+    VISIONPOWER_ALLOWED_DIRS: '/tmp, /var/tmp',
+    VISIONPOWER_MAX_IMAGE_BYTES: '12345',
+    VISIONPOWER_TIMEOUT_MS: '23456',
+    VISIONPOWER_MAX_TOKENS: '3456',
+    VISIONPOWER_MAX_IMAGES: '4',
+  })
+  assert.equal(visionpowerEnv.apiKey, 'visionpower-key')
+  assert.equal(visionpowerEnv.model, 'visionpower-model')
+  assert.equal(visionpowerEnv.baseUrl, 'https://visionpower.example.com/v1')
+  assert.deepEqual(visionpowerEnv.allowedDirs, ['/tmp', '/var/tmp'])
+  assert.equal(visionpowerEnv.maxImageBytes, 12345)
+  assert.equal(visionpowerEnv.requestTimeoutMs, 23456)
+  assert.equal(visionpowerEnv.maxTokens, 3456)
+  assert.equal(visionpowerEnv.maxImages, 4)
+
+  const runEnv = cfg({
+    RUN_VISION_API_KEY: 'run-key',
+    RUN_VISION_MODEL: 'run-model',
+    RUN_VISION_BASE_URL: 'https://run.example.com/v1',
+  })
+  assert.equal(runEnv.apiKey, 'run-key')
+  assert.equal(runEnv.model, 'run-model')
+  assert.equal(runEnv.baseUrl, 'https://run.example.com/v1')
+
+  const precedence = cfg({
+    VISIONPOWER_API_KEY: 'visionpower-key',
+    RUN_VISION_API_KEY: 'run-key',
+    OPENAI_API_KEY: 'openai-key',
+    VISIONPOWER_MODEL: 'visionpower-model',
+    RUN_VISION_MODEL: 'run-model',
+    VISIONPOWER_BASE_URL: 'https://visionpower.example.com/v1',
+    RUN_VISION_BASE_URL: 'https://run.example.com/v1',
+  })
+  assert.equal(precedence.apiKey, 'visionpower-key')
+  assert.equal(precedence.model, 'visionpower-model')
+  assert.equal(precedence.baseUrl, 'https://visionpower.example.com/v1')
+
+  const openaiFallback = cfg({ OPENAI_API_KEY: 'openai-key' })
+  assert.equal(openaiFallback.apiKey, 'openai-key')
+
+  const retryDefaults = cfg({ VISIONPOWER_API_KEY: 'k' })
+  assert.equal(retryDefaults.maxRetries, 2)
+  assert.equal(retryDefaults.debug, false)
+
+  const retryOverrides = cfg({
+    VISIONPOWER_API_KEY: 'k',
+    VISIONPOWER_MAX_RETRIES: '0',
+    VISIONPOWER_DEBUG: 'true',
+  })
+  assert.equal(retryOverrides.maxRetries, 0)
+  assert.equal(retryOverrides.debug, true)
+
+  assert.throws(() => cfg({ VISIONPOWER_API_KEY: 'k', VISIONPOWER_MAX_RETRIES: '-1' }), /non-negative integer/)
+  assert.throws(() => cfg({ VISIONPOWER_API_KEY: 'k', VISIONPOWER_DEBUG: 'maybe' }), /must be a boolean/)
+  assert.throws(() => cfg({
+    RUN_VISION_API_KEY: 'k',
+    RUN_VISION_BASE_URL: 'https://api.example.com/v1/chat/completions',
+  }), /should not include/)
+  assert.throws(() => cfg({
+    VISIONPOWER_API_KEY: 'k',
+    VISIONPOWER_BASE_URL: 'file:///tmp/model',
+  }), /VISIONPOWER_BASE_URL must use http or https/)
+  assert.throws(() => cfg({ RUN_VISION_API_KEY: 'k', RUN_VISION_MAX_TOKENS: '20abc' }), /positive integer/)
+  assert.throws(() => cfg({
+    VISIONPOWER_API_KEY: 'k',
+    VISIONPOWER_TIMEOUT_MS: 'later',
+    RUN_VISION_TIMEOUT_MS: '60000',
+  }), /VISIONPOWER_TIMEOUT_MS must be a positive integer/)
+
+  // --- Persistent config file (env still wins over it) ---
+  const fileConfigPath = join(tempDir, 'vp-config.json')
+  writeFileSync(fileConfigPath, JSON.stringify({
+    apiKey: 'file-key',
+    model: 'file-model',
+    baseUrl: 'https://file.example.com/v1',
+    maxImages: 3,
+  }))
+  const fromFile = loadVisionConfig({ VISIONPOWER_CONFIG: fileConfigPath })
+  assert.equal(fromFile.apiKey, 'file-key')
+  assert.equal(fromFile.model, 'file-model')
+  assert.equal(fromFile.baseUrl, 'https://file.example.com/v1')
+  assert.equal(fromFile.maxImages, 3)
+
+  const envBeatsFile = loadVisionConfig({ VISIONPOWER_CONFIG: fileConfigPath, VISIONPOWER_API_KEY: 'env-key' })
+  assert.equal(envBeatsFile.apiKey, 'env-key')   // env wins
+  assert.equal(envBeatsFile.model, 'file-model') // file used where env is absent
+
+  const missingFile = loadVisionConfig({ VISIONPOWER_CONFIG: join(tempDir, 'nope.json') })
+  assert.equal(missingFile.apiKey, '')           // an absent config file is fine
+
+  const badFileConfigPath = join(tempDir, 'vp-bad.json')
+  writeFileSync(badFileConfigPath, JSON.stringify({ maxRetries: -1 }))
+  assert.throws(
+    () => loadVisionConfig({ VISIONPOWER_CONFIG: badFileConfigPath }),
+    /config file "maxRetries" must be a non-negative integer/,
+  )
+
+  // --- Skill setup state marker ---
+  const skillStatePath = join(tempDir, 'skill-state.json')
+  await markSkillConfigVerified(
+    testConfig({ model: 'state-model', baseUrl: 'https://state.example.com/v1' }),
+    { VISIONPOWER_SKILL_STATE: skillStatePath },
+  )
+  const verifiedState = JSON.parse(readFileSync(skillStatePath, 'utf8'))
+  assert.equal(verifiedState.version, 1)
+  assert.equal(verifiedState.configVerified, true)
+  assert.equal(verifiedState.model, 'state-model')
+  assert.equal(verifiedState.baseUrl, 'https://state.example.com/v1')
+  assert.match(verifiedState.verifiedAt, /^\d{4}-\d{2}-\d{2}T/)
+  if (process.platform !== 'win32') {
+    assert.equal(statSync(skillStatePath).mode & 0o777, 0o600)
+  }
+
+  await markSkillConfigNeedsSetup('Bearer secret-token and apiKey: sk-testSECRET123456 are not configured', { VISIONPOWER_SKILL_STATE: skillStatePath })
+  const failedState = JSON.parse(readFileSync(skillStatePath, 'utf8'))
+  assert.equal(failedState.configVerified, false)
+  assert.match(failedState.needsSetupAt, /^\d{4}-\d{2}-\d{2}T/)
+  assert.equal(failedState.reason, 'Bearer [REDACTED] and apiKey: [REDACTED_API_KEY] are not configured')
+
+  if (process.platform !== 'win32') {
+    const symlinkTarget = join(tempDir, 'symlink-target.json')
+    const symlinkStatePath = join(tempDir, 'symlink-state.json')
+    writeFileSync(symlinkTarget, 'do-not-overwrite')
+    symlinkSync(symlinkTarget, symlinkStatePath)
+    await markSkillConfigVerified(testConfig(), { VISIONPOWER_SKILL_STATE: symlinkStatePath })
+    assert.equal(readFileSync(symlinkTarget, 'utf8'), 'do-not-overwrite')
+    const replacedState = JSON.parse(readFileSync(symlinkStatePath, 'utf8'))
+    assert.equal(replacedState.configVerified, true)
+  }
+
+  console.log('Unit tests passed.')
+} finally {
+  rmSync(tempDir, { recursive: true, force: true })
+}

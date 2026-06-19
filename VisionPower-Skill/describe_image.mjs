@@ -1,7 +1,270 @@
+#!/usr/bin/env node
+
+// AUTO-GENERATED — do not edit by hand.
+// Source of truth: src/config.js + src/vision-core.js.
+// Regenerate with: npm run build:skill
+
+import { readFileSync } from 'node:fs'
+import { chmod, mkdir, rename, unlink, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { isIP } from 'node:net'
 import { extname, isAbsolute, resolve, sep } from 'node:path'
+
+const DEFAULT_VISION_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+const DEFAULT_VISION_MODEL = 'qwen3-vl-flash'
+const DEFAULT_MAX_IMAGE_BYTES = 20 * 1024 * 1024
+const DEFAULT_REQUEST_TIMEOUT_MS = 60_000
+const DEFAULT_MAX_TOKENS = 2048
+const DEFAULT_MAX_IMAGES = 8
+const DEFAULT_MAX_RETRIES = 2
+
+const VISION_MODEL_PRESETS = [
+  { model: 'qwen3-vl-flash', label: 'Qwen3-VL Flash', baseUrl: DEFAULT_VISION_BASE_URL },
+  { model: 'qwen3-vl-plus', label: 'Qwen3-VL Plus', baseUrl: DEFAULT_VISION_BASE_URL },
+  { model: 'qwen3.6-flash', label: 'Qwen3.6 Flash', baseUrl: DEFAULT_VISION_BASE_URL },
+  { model: 'gpt-4o', label: 'GPT-4o', baseUrl: 'https://api.openai.com/v1' },
+  { model: 'gpt-4o-mini', label: 'GPT-4o mini', baseUrl: 'https://api.openai.com/v1' },
+]
+
+function getDefaultBaseUrlForModel(model) {
+  return VISION_MODEL_PRESETS.find((preset) => preset.model === model)?.baseUrl ?? DEFAULT_VISION_BASE_URL
+}
+
+function readEnvValue(env, names) {
+  for (const name of names) {
+    const value = env[name]
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return { name, value: String(value).trim() }
+    }
+  }
+
+  return { name: names[0], value: '' }
+}
+
+function parsePositiveInteger(envValue, fallback) {
+  if (!envValue.value) return fallback
+  const trimmed = envValue.value
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(`${envValue.name} must be a positive integer`)
+  }
+
+  const parsed = Number.parseInt(trimmed, 10)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${envValue.name} must be a positive integer`)
+  }
+
+  return parsed
+}
+
+function parseNonNegativeInteger(envValue, fallback) {
+  if (!envValue.value) return fallback
+  const trimmed = envValue.value
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(`${envValue.name} must be a non-negative integer`)
+  }
+
+  const parsed = Number.parseInt(trimmed, 10)
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`${envValue.name} must be a non-negative integer`)
+  }
+
+  return parsed
+}
+
+function parseBoolean(envValue) {
+  if (!envValue.value) return false
+  const normalized = envValue.value.toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  throw new Error(`${envValue.name} must be a boolean (true/false)`)
+}
+
+function parseAllowedDirs(value) {
+  if (!value.value) return []
+  return value.value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+// Persistent config file (default ~/.visionpower/config.json). This lets the key
+// and model survive without depending on a shell profile being sourced — which
+// is what an agent's spawned shell often does NOT do. Env vars still win over it.
+function getConfigFilePath(env = process.env) {
+  return env.VISIONPOWER_CONFIG?.trim() || join(homedir(), '.visionpower', 'config.json')
+}
+
+// Skill-only state marker. The generated zero-dependency Skill script updates
+// this after a successful model call/verification, so agents can remember that
+// setup already worked and avoid repeating noisy config preflight checks.
+function getSkillStateFilePath(env = process.env) {
+  return env.VISIONPOWER_SKILL_STATE?.trim() || join(homedir(), '.visionpower', 'skill-state.json')
+}
+
+async function writeSkillStateFile(state, env) {
+  const statePath = getSkillStateFilePath(env)
+  await mkdir(dirname(statePath), { recursive: true, mode: 0o700 })
+  const tempPath = `${statePath}.${process.pid}.${Date.now()}.tmp`
+  const content = `${JSON.stringify({ version: 1, ...state }, null, 2)}\n`
+  try {
+    await writeFile(tempPath, content, { mode: 0o600, flag: 'wx' })
+    await chmod(tempPath, 0o600)
+    await rename(tempPath, statePath)
+  } catch (error) {
+    await unlink(tempPath).catch(() => {})
+    throw error
+  }
+}
+
+function sanitizeSkillStateReason(reason) {
+  return String(reason || 'configuration failed')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [REDACTED]')
+    .replace(/\b(sk-[A-Za-z0-9_-]{8,})\b/g, '[REDACTED_API_KEY]')
+    .replace(/\b(api[-_ ]?key|token|secret)(["':=\s]+)([A-Za-z0-9._~+/=-]{8,})/gi, '$1$2[REDACTED]')
+    .slice(0, 500)
+}
+
+async function markSkillConfigVerified(config, env = process.env) {
+  await writeSkillStateFile({
+    configVerified: true,
+    verifiedAt: new Date().toISOString(),
+    model: config.model,
+    baseUrl: config.baseUrl,
+  }, env)
+}
+
+async function markSkillConfigNeedsSetup(reason, env = process.env) {
+  await writeSkillStateFile({
+    configVerified: false,
+    needsSetupAt: new Date().toISOString(),
+    reason: sanitizeSkillStateReason(reason),
+  }, env)
+}
+
+function loadConfigFile(env) {
+  const configPath = getConfigFilePath(env)
+  let raw
+  try {
+    raw = readFileSync(configPath, 'utf8')
+  } catch (error) {
+    if (error?.code === 'ENOENT') return {}
+    throw new Error(`Could not read config file ${configPath}: ${error.message}`)
+  }
+
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch (error) {
+    throw new Error(`Invalid JSON in config file ${configPath}: ${error.message}`)
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`Config file ${configPath} must contain a JSON object`)
+  }
+  return parsed
+}
+
+function stringFromFile(value, label) {
+  if (value === undefined || value === null) return undefined
+  if (typeof value !== 'string') {
+    throw new Error(`config file "${label}" must be a string`)
+  }
+  return value.trim() || undefined
+}
+
+function integerFromFile(value, label, { allowZero = false } = {}) {
+  if (value === undefined || value === null) return undefined
+  const valid = typeof value === 'number'
+    && Number.isSafeInteger(value)
+    && (allowZero ? value >= 0 : value > 0)
+  if (!valid) {
+    throw new Error(`config file "${label}" must be a ${allowZero ? 'non-negative' : 'positive'} integer`)
+  }
+  return value
+}
+
+function booleanFromFile(value, label) {
+  if (value === undefined || value === null) return undefined
+  if (typeof value !== 'boolean') {
+    throw new Error(`config file "${label}" must be a boolean`)
+  }
+  return value
+}
+
+function allowedDirsFromFile(value) {
+  if (value === undefined || value === null) return undefined
+  const list = Array.isArray(value)
+    ? value
+    : typeof value === 'string' ? value.split(',') : null
+  if (!list) {
+    throw new Error('config file "allowedDirs" must be an array or comma-separated string')
+  }
+  return list.map((item) => String(item).trim()).filter(Boolean)
+}
+
+function loadVisionConfig(env = process.env) {
+  const file = loadConfigFile(env)
+
+  const model = readEnvValue(env, ['VISIONPOWER_MODEL', 'RUN_VISION_MODEL']).value
+    || stringFromFile(file.model, 'model')
+    || DEFAULT_VISION_MODEL
+
+  const apiKey = readEnvValue(env, ['VISIONPOWER_API_KEY', 'RUN_VISION_API_KEY', 'OPENAI_API_KEY']).value
+    || stringFromFile(file.apiKey, 'apiKey')
+    || ''
+
+  const baseUrlEnv = readEnvValue(env, ['VISIONPOWER_BASE_URL', 'RUN_VISION_BASE_URL'])
+  const fileBaseUrl = stringFromFile(file.baseUrl, 'baseUrl')
+  const rawBaseUrl = baseUrlEnv.value || fileBaseUrl || getDefaultBaseUrlForModel(model)
+  const baseUrlSource = baseUrlEnv.value
+    ? baseUrlEnv.name
+    : fileBaseUrl ? 'config file "baseUrl"' : 'VISIONPOWER_BASE_URL'
+  const baseUrl = normalizeBaseUrl(rawBaseUrl, baseUrlSource)
+
+  const allowedDirsEnv = readEnvValue(env, ['VISIONPOWER_ALLOWED_DIRS', 'RUN_VISION_ALLOWED_DIRS'])
+  const debugEnv = readEnvValue(env, ['VISIONPOWER_DEBUG', 'RUN_VISION_DEBUG'])
+
+  return {
+    apiKey,
+    model,
+    baseUrl,
+    allowedDirs: allowedDirsEnv.value
+      ? parseAllowedDirs(allowedDirsEnv)
+      : (allowedDirsFromFile(file.allowedDirs) ?? []),
+    maxImageBytes: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_IMAGE_BYTES', 'RUN_VISION_MAX_IMAGE_BYTES']), integerFromFile(file.maxImageBytes, 'maxImageBytes') ?? DEFAULT_MAX_IMAGE_BYTES),
+    requestTimeoutMs: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_TIMEOUT_MS', 'RUN_VISION_TIMEOUT_MS']), integerFromFile(file.timeoutMs, 'timeoutMs') ?? DEFAULT_REQUEST_TIMEOUT_MS),
+    maxTokens: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_TOKENS', 'RUN_VISION_MAX_TOKENS']), integerFromFile(file.maxTokens, 'maxTokens') ?? DEFAULT_MAX_TOKENS),
+    maxImages: parsePositiveInteger(readEnvValue(env, ['VISIONPOWER_MAX_IMAGES', 'RUN_VISION_MAX_IMAGES']), integerFromFile(file.maxImages, 'maxImages') ?? DEFAULT_MAX_IMAGES),
+    maxRetries: parseNonNegativeInteger(readEnvValue(env, ['VISIONPOWER_MAX_RETRIES', 'RUN_VISION_MAX_RETRIES']), integerFromFile(file.maxRetries, 'maxRetries', { allowZero: true }) ?? DEFAULT_MAX_RETRIES),
+    debug: debugEnv.value ? parseBoolean(debugEnv) : (booleanFromFile(file.debug, 'debug') ?? false),
+  }
+}
+
+function normalizeBaseUrl(value, name) {
+  let url
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error(`${name} must be a valid http or https URL`)
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error(`${name} must use http or https`)
+  }
+
+  const pathname = url.pathname.replace(/\/+$/, '')
+  if (pathname.endsWith('/chat/completions')) {
+    throw new Error(`${name} should not include /chat/completions`)
+  }
+
+  url.pathname = pathname || '/'
+  url.search = ''
+  url.hash = ''
+
+  return url.toString().replace(/\/+$/, '')
+}
 
 const VISION_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
 
@@ -99,7 +362,7 @@ function assertAllowedPath(realImagePath, allowedDirs) {
   }
 }
 
-export async function readLocalImageAsBase64(imagePath, config) {
+async function readLocalImageAsBase64(imagePath, config) {
   if (!isAbsolute(imagePath)) {
     throw new Error('image_path must be an absolute path')
   }
@@ -376,7 +639,7 @@ async function fetchVisionCompletion(requestBody, config) {
   }
 }
 
-export async function describeImage(params, config) {
+async function describeImage(params, config) {
   const images = normalizeImageInputs(params, config)
   if (!config.apiKey) {
     throw new Error('VISIONPOWER_API_KEY or RUN_VISION_API_KEY is not configured')
@@ -430,3 +693,108 @@ export async function describeImage(params, config) {
   debugLog(config, `completed in ${Date.now() - startedAt}ms`)
   return responseContent
 }
+
+// ---- Skill entry point (self-contained; no install, no extra deps) ----
+
+const HELP = `VisionPower — understand images with a vision model.
+
+Usage:
+  node describe_image.mjs --image-path <absolute path> [--prompt <text>]
+  node describe_image.mjs --image-url <https url> [--prompt <text>]
+  node describe_image.mjs request.json
+  echo '<json request>' | node describe_image.mjs
+
+The request JSON supports image_path / image_url / image_base64 / images[] / prompt.
+Configure the API key in ~/.visionpower/config.json ({"apiKey":"...","model":"..."})
+or via the VISIONPOWER_API_KEY environment variable. See SKILL.md for first-time setup.`
+
+function parseSkillArgs(argv) {
+  const flags = {}
+  const positionals = []
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i]
+    if (!arg.startsWith('--')) { positionals.push(arg); continue }
+    const eq = arg.indexOf('=')
+    if (eq !== -1) { flags[arg.slice(2, eq)] = arg.slice(eq + 1); continue }
+    const key = arg.slice(2)
+    const next = argv[i + 1]
+    if (key === 'help' || next === undefined || next.startsWith('--')) {
+      flags[key] = true
+    } else {
+      flags[key] = next
+      i += 1
+    }
+  }
+  return { flags, positionals }
+}
+
+async function readSkillStdin() {
+  if (process.stdin.isTTY) return ''
+  const chunks = []
+  for await (const chunk of process.stdin) chunks.push(chunk)
+  return Buffer.concat(chunks).toString('utf8')
+}
+
+async function resolveSkillRequest(argv) {
+  const { flags, positionals } = parseSkillArgs(argv)
+  if (flags.help) return { help: true }
+
+  const fileArg = flags.input || positionals[0]
+  if (fileArg) {
+    return { request: JSON.parse(await readFile(fileArg, 'utf8')) }
+  }
+
+  const request = {}
+  if (flags['image-path']) request.image_path = flags['image-path']
+  if (flags['image-url']) request.image_url = flags['image-url']
+  if (flags['image-base64']) request.image_base64 = flags['image-base64']
+  if (flags.mime) request.image_mime_type = flags.mime
+  if (flags.prompt) request.prompt = flags.prompt
+
+  if (request.image_path || request.image_url || request.image_base64) {
+    return { request }
+  }
+
+  const raw = (await readSkillStdin()).trim()
+  if (raw) return { request: JSON.parse(raw) }
+  return { request }
+}
+
+async function mainSkill() {
+  let resolved
+  try {
+    resolved = await resolveSkillRequest(process.argv.slice(2))
+  } catch (error) {
+    process.stderr.write(`VisionPower error: could not read request: ${error.message}\n`)
+    process.exitCode = 1
+    return
+  }
+
+  if (resolved.help) {
+    process.stdout.write(`${HELP}\n`)
+    return
+  }
+
+  try {
+    const config = loadVisionConfig(process.env)
+    const text = await describeImage(resolved.request, config)
+    // Record that the Skill setup has successfully reached the provider. This
+    // marker is intentionally best-effort: image analysis should never fail just
+    // because the agent cannot write local state.
+    await markSkillConfigVerified(config, process.env).catch(() => {})
+    process.stdout.write(`${text}\n`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (isLikelySkillSetupError(message)) {
+      await markSkillConfigNeedsSetup(message, process.env).catch(() => {})
+    }
+    process.stderr.write(`VisionPower error: ${message}\n`)
+    process.exitCode = 1
+  }
+}
+
+function isLikelySkillSetupError(message) {
+  return /not configured|config file|VISIONPOWER_|RUN_VISION_|OPENAI_API_KEY|base\s*url|unauthori[sz]ed|forbidden|invalid[^\n]*(api|key|token)|authentication|permission denied|\b401\b|\b403\b/i.test(message)
+}
+
+mainSkill()

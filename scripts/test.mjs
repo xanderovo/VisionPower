@@ -296,6 +296,17 @@ try {
   assert.equal(envBeatsFile.apiKey, 'env-key')   // env wins
   assert.equal(envBeatsFile.model, 'file-model') // file used where env is absent
 
+  const envStyleFileConfigPath = join(tempDir, 'vp-env-style-config.json')
+  writeFileSync(envStyleFileConfigPath, JSON.stringify({
+    VISIONPOWER_API_KEY: 'env-style-file-key',
+    VISIONPOWER_MODEL: 'env-style-file-model',
+    VISIONPOWER_BASE_URL: 'https://env-style-file.example.com/v1',
+  }))
+  const fromEnvStyleFile = loadVisionConfig({ VISIONPOWER_CONFIG: envStyleFileConfigPath })
+  assert.equal(fromEnvStyleFile.apiKey, 'env-style-file-key')
+  assert.equal(fromEnvStyleFile.model, 'env-style-file-model')
+  assert.equal(fromEnvStyleFile.baseUrl, 'https://env-style-file.example.com/v1')
+
   const missingFile = loadVisionConfig({ VISIONPOWER_CONFIG: join(tempDir, 'nope.json') })
   assert.equal(missingFile.apiKey, '')           // an absent config file is fine
 

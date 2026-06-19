@@ -110,12 +110,17 @@ npm install -g visionpower --registry=https://registry.npmmirror.com
       "env": {
         "VISIONPOWER_API_KEY": "填写你的 API Key",
         "VISIONPOWER_MODEL": "qwen3-vl-flash",
-        "VISIONPOWER_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        "VISIONPOWER_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "RUN_VISION_API_KEY": "填写同一个 API Key（兼容旧版）",
+        "RUN_VISION_MODEL": "qwen3-vl-flash",
+        "RUN_VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
       }
     }
   }
 }
 ```
+
+> `VISIONPOWER_*` 是新版主配置名；`RUN_VISION_*` 是旧版兼容名。MCP 宿主如果还在缓存旧 npm 包，只写 `VISIONPOWER_API_KEY` 会出现 `RUN_VISION_API_KEY is not configured`。上面同时写两套可避免这个问题；升级到新版后只保留 `VISIONPOWER_*` 也可以。
 
 <details>
 <summary><b>🇨🇳 国内 npm 镜像版（弱网推荐）</b></summary>
@@ -142,6 +147,9 @@ args = ["-y", "visionpower"]
 VISIONPOWER_API_KEY = "填写你的 API Key"
 VISIONPOWER_MODEL = "qwen3-vl-flash"
 VISIONPOWER_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+RUN_VISION_API_KEY = "填写同一个 API Key（兼容旧版）"
+RUN_VISION_MODEL = "qwen3-vl-flash"
+RUN_VISION_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
 > 国内镜像把 `args` 改为 `["-y", "--registry=https://registry.npmmirror.com", "visionpower"]`。
@@ -353,6 +361,8 @@ echo '<JSON 请求>' | node <skill>/describe_image.mjs # 或从 stdin 传入
   "model": "qwen3-vl-flash"
 }
 ```
+
+为兼容把环境变量名误写进 JSON 的旧配置，也接受 `VISIONPOWER_API_KEY` / `RUN_VISION_API_KEY`、`VISIONPOWER_MODEL` / `RUN_VISION_MODEL`、`VISIONPOWER_BASE_URL` / `RUN_VISION_BASE_URL` 这些键；但新配置仍推荐使用上面的 `apiKey` / `model` / `baseUrl`。
 
 **环境变量**（会覆盖配置文件）：
 

@@ -174,6 +174,15 @@ function stringFromFile(value, label) {
   return value.trim() || undefined
 }
 
+function readFileStringValue(file, names) {
+  for (const name of names) {
+    const value = stringFromFile(file[name], name)
+    if (value) return { name: `config file "${name}"`, value }
+  }
+
+  return { name: `config file "${names[0]}"`, value: '' }
+}
+
 function integerFromFile(value, label, { allowZero = false } = {}) {
   if (value === undefined || value === null) return undefined
   const valid = typeof value === 'number'
@@ -207,20 +216,22 @@ function allowedDirsFromFile(value) {
 function loadVisionConfig(env = process.env) {
   const file = loadConfigFile(env)
 
+  const modelFile = readFileStringValue(file, ['model', 'VISIONPOWER_MODEL', 'RUN_VISION_MODEL'])
   const model = readEnvValue(env, ['VISIONPOWER_MODEL', 'RUN_VISION_MODEL']).value
-    || stringFromFile(file.model, 'model')
+    || modelFile.value
     || DEFAULT_VISION_MODEL
 
+  const apiKeyFile = readFileStringValue(file, ['apiKey', 'VISIONPOWER_API_KEY', 'RUN_VISION_API_KEY', 'OPENAI_API_KEY'])
   const apiKey = readEnvValue(env, ['VISIONPOWER_API_KEY', 'RUN_VISION_API_KEY', 'OPENAI_API_KEY']).value
-    || stringFromFile(file.apiKey, 'apiKey')
+    || apiKeyFile.value
     || ''
 
   const baseUrlEnv = readEnvValue(env, ['VISIONPOWER_BASE_URL', 'RUN_VISION_BASE_URL'])
-  const fileBaseUrl = stringFromFile(file.baseUrl, 'baseUrl')
-  const rawBaseUrl = baseUrlEnv.value || fileBaseUrl || getDefaultBaseUrlForModel(model)
+  const fileBaseUrl = readFileStringValue(file, ['baseUrl', 'VISIONPOWER_BASE_URL', 'RUN_VISION_BASE_URL'])
+  const rawBaseUrl = baseUrlEnv.value || fileBaseUrl.value || getDefaultBaseUrlForModel(model)
   const baseUrlSource = baseUrlEnv.value
     ? baseUrlEnv.name
-    : fileBaseUrl ? 'config file "baseUrl"' : 'VISIONPOWER_BASE_URL'
+    : fileBaseUrl.value ? fileBaseUrl.name : 'VISIONPOWER_BASE_URL'
   const baseUrl = normalizeBaseUrl(rawBaseUrl, baseUrlSource)
 
   const allowedDirsEnv = readEnvValue(env, ['VISIONPOWER_ALLOWED_DIRS', 'RUN_VISION_ALLOWED_DIRS'])
@@ -642,7 +653,7 @@ async function fetchVisionCompletion(requestBody, config) {
 async function describeImage(params, config) {
   const images = normalizeImageInputs(params, config)
   if (!config.apiKey) {
-    throw new Error('VISIONPOWER_API_KEY or RUN_VISION_API_KEY is not configured')
+    throw new Error('API key is not configured. Set VISIONPOWER_API_KEY (preferred), RUN_VISION_API_KEY (legacy), OPENAI_API_KEY, or apiKey in ~/.visionpower/config.json')
   }
 
   const prompt = params.prompt?.trim()

@@ -9,7 +9,7 @@ import { describeImage } from './vision-core.js'
 const server = new McpServer({
   name: 'visionpower',
   title: 'VisionPower',
-  version: '0.1.1',
+  version: '0.1.2',
 })
 
 server.registerTool(

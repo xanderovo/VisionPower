@@ -35,7 +35,7 @@ Add this to `~/.codex/config.toml`:
 [mcp_servers."visionpower"]
 type = "stdio"
 command = "npx"
-args = ["-y", "github:RunhuaHuang/VisionPower#v0.1.1"]
+args = ["-y", "github:RunhuaHuang/VisionPower#v0.1.2"]
 
 [mcp_servers."visionpower".env]
 RUN_VISION_API_KEY = "your-api-key"
@@ -53,7 +53,7 @@ Add this to the app's MCP configuration:
   "mcpServers": {
     "visionpower": {
       "command": "npx",
-      "args": ["-y", "github:RunhuaHuang/VisionPower#v0.1.1"],
+      "args": ["-y", "github:RunhuaHuang/VisionPower#v0.1.2"],
       "env": {
         "RUN_VISION_API_KEY": "your-api-key",
         "RUN_VISION_MODEL": "qwen3-vl-flash",

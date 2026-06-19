@@ -9,7 +9,7 @@ import { toolInputSchemaShape } from './schema.js'
 const server = new McpServer({
   name: 'visionpower',
   title: 'VisionPower',
-  version: '1.2.6',
+  version: '1.2.7',
 })
 
 server.registerTool(

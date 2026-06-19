@@ -83,9 +83,9 @@ VisionPower 让 Codex、Claude Desktop、Cursor、Cline、Cherry Studio 等 Agen
 Base URL：https://dashscope.aliyuncs.com/compatible-mode/v1
 
 【安装】先实测 npm 源连通性：
-- 官方源稳定 → npx -y visionpower
-- 不稳定/中国大陆网络 → npx -y --registry=https://registry.npmmirror.com visionpower
-- 仅当 npx 连续失败，才 npm install -g visionpower 并把 command 配成 visionpower
+- 官方源稳定 → npx -y --package visionpower@latest visionpower
+- 不稳定/中国大陆网络 → npx -y --registry=https://registry.npmmirror.com --package visionpower@latest visionpower
+- 仅当 npx 连续失败，才 npm install -g visionpower@latest 并把 command 配成 visionpower
 
 【写配置——重点】
 不要套用通用模板。先在本 Agent 的配置目录里找一个【已经存在且正在运行的 MCP server 配置】
@@ -108,7 +108,7 @@ Base URL：https://dashscope.aliyuncs.com/compatible-mode/v1
   "mcpServers": {
     "visionpower": {
       "command": "npx",
-      "args": ["-y", "visionpower"],
+      "args": ["-y", "--package", "visionpower@latest", "visionpower"],
       "env": {
         "VISIONPOWER_API_KEY": "填写你的 API Key",
         "VISIONPOWER_MODEL": "qwen3-vl-flash",
@@ -125,7 +125,7 @@ Base URL：https://dashscope.aliyuncs.com/compatible-mode/v1
 把 `args` 换成走 npmmirror 拉取：
 
 ```json
-"args": ["-y", "--registry=https://registry.npmmirror.com", "visionpower"]
+"args": ["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]
 ```
 
 </details>
@@ -138,7 +138,7 @@ Codex 使用 TOML（不是 JSON）。写入 `~/.codex/config.toml`：
 [mcp_servers."visionpower"]
 type = "stdio"
 command = "npx"
-args = ["-y", "visionpower"]
+args = ["-y", "--package", "visionpower@latest", "visionpower"]
 
 [mcp_servers."visionpower".env]
 VISIONPOWER_API_KEY = "填写你的 API Key"
@@ -146,13 +146,13 @@ VISIONPOWER_MODEL = "qwen3-vl-flash"
 VISIONPOWER_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-> 国内镜像把 `args` 改为 `["-y", "--registry=https://registry.npmmirror.com", "visionpower"]`。
+> 国内镜像把 `args` 改为 `["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]`。
 
 <details>
 <summary><b>先全局安装再配置（弱网 / 长期使用最稳定）</b></summary>
 
 ```bash
-npm install -g visionpower   # 国内加 --registry=https://registry.npmmirror.com
+npm install -g visionpower@latest   # 国内加 --registry=https://registry.npmmirror.com
 ```
 
 然后把 `command` 配成本地命令 `visionpower`（`args: []`）。若 GUI 应用（Claude Desktop / Cursor）找不到命令，先 `which visionpower` 取绝对路径，再填进 `command`。
@@ -373,6 +373,12 @@ echo '<JSON 请求>' | node <skill>/describe_image.mjs # 或从 stdin 传入
 | `VISIONPOWER_SKILL_STATE` | | `~/.visionpower/skill-state.json` | 仅 Skill 脚本使用：记录配置是否已成功验证，避免后续重复预检。 |
 
 > **命名**：主前缀是 `VISIONPOWER_*`。API Key 还可回退读取 `OPENAI_API_KEY`。
+
+### 迁移（0.x → 1.x）
+
+- 旧版 README 中的 `RUN_VISION_API_KEY` 已更名为 `VISIONPOWER_API_KEY`。请把 MCP 配置或 shell 环境里的 `RUN_VISION_API_KEY` 改成 `VISIONPOWER_API_KEY`。
+- 推荐把 `npx -y visionpower` 直接替换为 `npx -y --package visionpower@latest visionpower`，避免 `npx` 优先命中项目本地的旧版 `node_modules/.bin/visionpower`。
+- 中国大陆镜像对应命令：`npx -y --registry=https://registry.npmmirror.com --package visionpower@latest visionpower`。
 
 ---
 

@@ -108,6 +108,10 @@ try {
     /publicly reachable/,
   )
   await assertRejectsMessage(
+    () => describeImage({ image_url: 'https://example.com/image.png' }, testConfig({ apiKey: '' })),
+    /Set VISIONPOWER_API_KEY/,
+  )
+  await assertRejectsMessage(
     () => describeImage({ image_base64: 'not-base64!!!' }, testConfig()),
     /valid standard base64/,
   )
@@ -191,6 +195,14 @@ try {
     generatedSkill,
     committedSkill,
     'VisionPower-Skill/describe_image.mjs is out of date; run `npm run build:skill`',
+  )
+
+  // Keep the MCP server's advertised version in lockstep with package.json.
+  const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  const serverSource = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8')
+  assert.ok(
+    serverSource.includes(`version: '${packageJson.version}'`),
+    'src/index.js server version must match package.json',
   )
 
   // Env-only resolution must not be affected by a real config file on the test

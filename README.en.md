@@ -84,9 +84,9 @@ Model: qwen3-vl-flash
 Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
 
 [Install] First test npm registry connectivity:
-- Official registry is stable → npx -y visionpower
-- Unstable / mainland China network → npx -y --registry=https://registry.npmmirror.com visionpower
-- Only if npx fails repeatedly, run npm install -g visionpower and set command to visionpower
+- Official registry is stable → npx -y --package visionpower@latest visionpower
+- Unstable / mainland China network → npx -y --registry=https://registry.npmmirror.com --package visionpower@latest visionpower
+- Only if npx fails repeatedly, run npm install -g visionpower@latest and set command to visionpower
 
 [Write config — important]
 Do not apply a generic template. First find an existing MCP server config that is already present
@@ -111,7 +111,7 @@ For tools that configure MCP servers with JSON, such as Claude Desktop, Cursor, 
   "mcpServers": {
     "visionpower": {
       "command": "npx",
-      "args": ["-y", "visionpower"],
+      "args": ["-y", "--package", "visionpower@latest", "visionpower"],
       "env": {
         "VISIONPOWER_API_KEY": "your-api-key",
         "VISIONPOWER_MODEL": "qwen3-vl-flash",
@@ -128,7 +128,7 @@ For tools that configure MCP servers with JSON, such as Claude Desktop, Cursor, 
 Point `args` at npmmirror:
 
 ```json
-"args": ["-y", "--registry=https://registry.npmmirror.com", "visionpower"]
+"args": ["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]
 ```
 
 </details>
@@ -141,7 +141,7 @@ Codex uses TOML instead of JSON. Add this to `~/.codex/config.toml`:
 [mcp_servers."visionpower"]
 type = "stdio"
 command = "npx"
-args = ["-y", "visionpower"]
+args = ["-y", "--package", "visionpower@latest", "visionpower"]
 
 [mcp_servers."visionpower".env]
 VISIONPOWER_API_KEY = "your-api-key"
@@ -149,13 +149,13 @@ VISIONPOWER_MODEL = "qwen3-vl-flash"
 VISIONPOWER_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 ```
 
-> For the China mirror, change `args` to `["-y", "--registry=https://registry.npmmirror.com", "visionpower"]`.
+> For the China mirror, change `args` to `["-y", "--registry=https://registry.npmmirror.com", "--package", "visionpower@latest", "visionpower"]`.
 
 <details>
 <summary><b>Install globally first (most stable for unreliable networks / long-term use)</b></summary>
 
 ```bash
-npm install -g visionpower   # add --registry=https://registry.npmmirror.com in China
+npm install -g visionpower@latest   # add --registry=https://registry.npmmirror.com in China
 ```
 
 Then set `command` to the local `visionpower` (`args: []`). If a GUI app (Claude Desktop / Cursor) cannot find it, run `which visionpower` for the absolute path and use that as `command`.
@@ -378,6 +378,12 @@ Both forms share the same configuration. Precedence: **env var > config file > d
 | `VISIONPOWER_SKILL_STATE` | | `~/.visionpower/skill-state.json` | Skill script only: records whether setup has been verified so later calls can skip repeated preflight checks. |
 
 > **Naming**: the primary prefix is `VISIONPOWER_*`. The API key also falls back to `OPENAI_API_KEY`.
+
+### Migration (0.x → 1.x)
+
+- The old README used `RUN_VISION_API_KEY`; the 1.x primary name is `VISIONPOWER_API_KEY`. Rename `RUN_VISION_API_KEY` to `VISIONPOWER_API_KEY` in your MCP config or shell environment.
+- Prefer replacing `npx -y visionpower` directly with `npx -y --package visionpower@latest visionpower`, which prevents `npx` from using an old project-local `node_modules/.bin/visionpower` first.
+- Mainland China mirror command: `npx -y --registry=https://registry.npmmirror.com --package visionpower@latest visionpower`.
 
 ---
 

@@ -1,124 +1,155 @@
 ---
 name: visionpower
-description: Understand images — read screenshot text (OCR), interpret charts and diagrams, and describe photos, UI mockups, or document scans using a vision model. Use whenever the user shares or points to an image, screenshot, photo, chart, diagram, or asks "what's in this picture", "read the text in this image", or to analyze visual content. Runs the bundled describe_image.mjs script (Node 18+) and needs a vision model API key.
+description: 理解图片：读取截图文字（OCR）、解读图表和示意图，并使用视觉模型描述照片、UI 设计稿或文档扫描件。当用户分享或指向图片、截图、照片、图表、示意图，或询问 "what's in this picture"、"read the text in this image"、分析视觉内容时使用。运行内置的 describe_image.mjs 脚本（Node 18+），并需要视觉模型 API Key。
 ---
 
 # VisionPower
 
-Understand one or more images with a vision model. This skill is **self-contained**:
-the script `describe_image.mjs` sits next to this file and runs with plain Node.js —
-no `npm install`, no CLI to install, no extra dependencies. It only needs **Node 18+**
-and a vision model **API key**.
+使用视觉模型理解一张或多张图片。这个 skill 是**自包含**的：
+脚本 `describe_image.mjs` 与本文件位于同一目录，可直接用 Node.js 运行，
+无需 `npm install`、无需安装 CLI、无需额外依赖。它只需要 **Node 18+**
+和一个视觉模型 **API Key**。
 
-Call the script by its absolute path. If this skill is installed at
-`~/.claude/skills/visionpower/`, the script is
-`~/.claude/skills/visionpower/describe_image.mjs`.
+请通过脚本的绝对路径调用它。不同 Agent 的 skill 安装目录可能不同；不要假设
+`~/.claude/skills/visionpower/` 一定存在。如果该 skill 安装在某个目录
+`<skill>` 下，脚本路径就是 `<skill>/describe_image.mjs`。
 
-## Response style (important)
+## 路径与沙箱环境
 
-Keep the mechanics invisible. The user wants the answer about their image, not a
-play-by-play of how you got it.
+很多 Agent 会在独立的沙箱、容器或私有根目录中运行。这里的 `~` 表示**运行脚本
+的当前 Agent 环境的 home**，不一定是系统用户的 home。为避免写入系统环境或错误
+的 home，优先选择一个 Agent 私有、可写、持久的目录作为 `<vp-config-dir>`，例如
+Agent 提供的状态目录或工作区下已忽略提交的 `.visionpower/` 目录。
 
-- **Do not narrate or pre-check on normal calls.** Do not run `node --version`, do not
-  `cat` the config file, and do not announce "checking environment", "config exists",
-  "running the script", etc. Just run the script once and answer. First-time setup is the
-  only exception.
-- **Run the script directly.** Assume it is already set up. The script fails fast with a
-  clear message if Node or the API key is missing — only THEN fall back to setup.
-- **Remember verified setup.** The script writes a state marker at
-  `~/.visionpower/skill-state.json` after any successful model call. If that marker says
-  `"configVerified": true`, never do setup/config preflight on later calls; only ask the
-  user to reconfigure if a later script run fails with a missing-key/auth/config error.
-- **Do not expose internals** in your reply: no command lines, no absolute paths, no raw
-  request JSON, no model/config details. Present only the result (or a brief, plain-language
-  error if it failed).
-- Reply in the **user's language**, concise and direct — as if you simply looked at the image.
+不要修改 shell profile、全局环境变量或系统级配置。需要指定配置路径时，只在运行
+脚本的那条命令前临时传入：
 
-## First-time setup (only when not configured)
+```bash
+VISIONPOWER_CONFIG="<vp-config-dir>/config.json" \
+VISIONPOWER_SKILL_STATE="<vp-config-dir>/skill-state.json" \
+node <skill>/describe_image.mjs --help
+```
 
-**Skip this on normal calls.** Only do it the very first time, or after the script returns
-a missing-key, authentication, or configuration error. The settings are saved to a
-**persistent config file** `~/.visionpower/config.json` that the script reads automatically
-on every run, so the key survives across sessions and you never configure it again.
+## 回复风格（重要）
 
-The script also maintains a **setup-state marker**:
+隐藏执行细节。用户要的是图片内容的答案，不是执行过程说明。
+
+- **正常调用时不要叙述或预检查。** 不要运行 `node --version`，不要
+  `cat` 配置文件，也不要宣布“检查环境”“配置存在”“正在运行脚本”等。
+  直接运行一次脚本并回答。首次设置是唯一例外。
+- **直接运行脚本。** 默认它已经配置好。脚本会在 Node 或 API Key 缺失时
+  快速失败并给出清晰错误；只有这时才回到设置流程。
+- **记住已验证的设置。** 每次模型调用成功后，脚本会在状态文件中写入标记。
+  使用沙箱配置时，该文件应是 `<vp-config-dir>/skill-state.json`；未指定时才使用
+  当前 Agent home 下的 `~/.visionpower/skill-state.json`。如果该标记显示
+  `"configVerified": true`，后续调用不要再做设置/配置预检查；只有当脚本再次
+  因为缺少 key、鉴权失败或配置错误而失败时，才要求用户重新配置。
+- **不要在回复中暴露内部细节**：不要给出命令行、绝对路径、原始请求 JSON、
+  模型或配置细节。只呈现结果；如果失败，给出简短的自然语言错误说明。
+- 使用**用户的语言**回复，简洁直接，就像你直接看到了图片一样。
+
+## 首次设置（仅在尚未配置时）
+
+**正常调用时跳过本节。** 只在第一次使用，或脚本返回缺少 key、鉴权失败、
+配置错误时执行。设置应保存到 Agent 私有的**持久配置文件**。沙箱环境优先使用
+`<vp-config-dir>/config.json`，并在每次运行脚本时通过 `VISIONPOWER_CONFIG`
+指向它。只有在确认当前 `~` 是该 Agent 专属且可写时，才使用默认的
+`~/.visionpower/config.json`。
+
+脚本还会维护一个**设置状态标记**：
 
 ```json
 { "configVerified": true, "verifiedAt": "..." }
 ```
 
-This lives at `~/.visionpower/skill-state.json` (override with
-`VISIONPOWER_SKILL_STATE`). A successful analysis or verification writes
-`configVerified: true` automatically. Missing-key/auth failures write
-`configVerified: false` best-effort. Use this marker only to avoid repeated setup checks;
-do not read or print the API key.
+该文件默认位于当前 Agent home 下的 `~/.visionpower/skill-state.json`，但沙箱环境
+应使用 `VISIONPOWER_SKILL_STATE="<vp-config-dir>/skill-state.json"` 覆盖。分析或
+验证成功后会自动写入 `configVerified: true`。缺少 key 或鉴权失败时，会尽力写入
+`configVerified: false`。该标记只用于避免重复设置检查；不要读取或打印 API Key。
 
-1. **Confirm Node 18+** (only here, not on normal calls): `node --version`.
+1. **确认 Node 18+**（仅在这里执行，正常调用不要执行）：`node --version`。
 
-2. **Ask the user which vision model to use**, and offer the default:
-   - `qwen3-vl-flash` — **default**, Alibaba Cloud Model Studio / DashScope, fast & low-cost.
-     Get a key: https://bailian.console.aliyun.com/?tab=model#/api-key
-   - `qwen3-vl-plus` — DashScope, higher quality.
-   - `gpt-4o` — OpenAI (set `baseUrl` to `https://api.openai.com/v1`).
-     Get a key: https://platform.openai.com/api-keys
+2. **询问用户要使用哪个视觉模型**，并提供默认选项：
+   - `qwen3-vl-flash`：**默认**，阿里云百炼 / DashScope，速度快、成本低。
+     获取 key：https://bailian.console.aliyun.com/?tab=model#/api-key
+   - `qwen3-vl-plus`：DashScope，质量更高。
+   - `gpt-4o`：OpenAI（将 `baseUrl` 设为 `https://api.openai.com/v1`）。
+     获取 key：https://platform.openai.com/api-keys
 
-   If the user has no preference, use `qwen3-vl-flash`.
+   如果用户没有偏好，使用 `qwen3-vl-flash`。
 
-3. **Ask the user for their API key, then save it** to the persistent config file. Create
-   `~/.visionpower/config.json` (mode 600). Only include `model`/`baseUrl` if not the default:
+3. **向用户索取 API Key，然后保存**到 Agent 私有持久配置文件。先选择一个
+   `<vp-config-dir>`，它必须是当前 Agent 可写、不会被提交到仓库的目录。创建
+   `<vp-config-dir>/config.json`（权限 mode 600）。只有在不是默认值时，
+   才需要包含 `model`/`baseUrl`：
 
    ```bash
-   mkdir -p ~/.visionpower
-   cat > ~/.visionpower/config.json <<'JSON'
+   mkdir -p "<vp-config-dir>"
+   cat > "<vp-config-dir>/config.json" <<'JSON'
    {
      "apiKey": "PASTE_THE_KEY_HERE",
      "model": "qwen3-vl-flash"
    }
    JSON
-   chmod 600 ~/.visionpower/config.json
+   chmod 600 "<vp-config-dir>/config.json"
    ```
 
-   For OpenAI, add `"baseUrl": "https://api.openai.com/v1"` and set `"model": "gpt-4o"`.
-   Never print the key back to the user — only confirm it was saved.
+   如果使用 OpenAI，添加 `"baseUrl": "https://api.openai.com/v1"`，
+   并将 `"model"` 设为 `"gpt-4o"`。不要把 key 原样回显给用户，只确认已保存。
 
-4. **Verify**: run `node <skill>/describe_image.mjs --image-url <some public image> --prompt "describe"`.
-   It should now reach the model instead of reporting a missing key. A successful run records
-   `configVerified: true`, so future calls should go straight to image analysis with no
-   config check.
+4. **验证**：运行下面的命令。它只为本次调用设置环境变量，不修改系统环境：
 
-> The script also accepts the API key from the `VISIONPOWER_API_KEY` environment variable,
-> which overrides the config file. The config file is the recommended way because an agent's
-> spawned shell usually does **not** inherit env vars you exported in your shell profile.
+   ```bash
+   VISIONPOWER_CONFIG="<vp-config-dir>/config.json" \
+   VISIONPOWER_SKILL_STATE="<vp-config-dir>/skill-state.json" \
+   node <skill>/describe_image.mjs --image-url <some public image> --prompt "describe"
+   ```
 
-## How to use
+   此时它应该能访问模型，而不是报告缺少 key。成功运行会记录
+   `configVerified: true`，以后应直接进入图片分析，不再检查配置。
 
-On a normal request, **just run the script once** with the image and report the result —
-no preflight checks, no narration (see Response style above). Pick the simplest form below
-and replace `<skill>` with this folder's absolute path.
+> 脚本也接受环境变量 `VISIONPOWER_API_KEY` 中的 API Key，并且它会覆盖配置文件。
+> 推荐使用 `VISIONPOWER_CONFIG` 指向 Agent 私有配置文件，因为 Agent 启动的子
+> shell 通常**不会**继承你写在 shell profile 里的环境变量。不要为了本 skill
+> 修改 shell profile 或系统级环境。
 
-### A single local image (use an absolute path)
+## 使用方法
+
+正常请求时，**只运行一次脚本**并把图片分析结果告诉用户：
+不要做预检查，不要叙述执行过程（见上方“回复风格”）。选择下面最简单的形式，
+并将 `<skill>` 替换为该文件夹的绝对路径。如果首次设置使用了 `<vp-config-dir>`，
+每次调用都要在命令前带上同样的 `VISIONPOWER_CONFIG` 和
+`VISIONPOWER_SKILL_STATE`。
+
+### 单张本地图片（使用绝对路径）
 
 ```bash
+VISIONPOWER_CONFIG="<vp-config-dir>/config.json" \
+VISIONPOWER_SKILL_STATE="<vp-config-dir>/skill-state.json" \
 node <skill>/describe_image.mjs --image-path /absolute/path/to/image.png --prompt "Read the text and summarize it."
 ```
 
-### A public image URL
+### 公网图片 URL
 
 ```bash
+VISIONPOWER_CONFIG="<vp-config-dir>/config.json" \
+VISIONPOWER_SKILL_STATE="<vp-config-dir>/skill-state.json" \
 node <skill>/describe_image.mjs --image-url https://example.com/image.png --prompt "What is in this image?"
 ```
 
-### Multiple images, Base64, or any complex request — use JSON
+### 多张图片、Base64 或复杂请求：使用 JSON
 
-Write the request to a file and pass it as an argument (or pipe it via stdin):
+将请求写入文件并作为参数传入，或通过 stdin 管道传入：
 
 ```bash
+VISIONPOWER_CONFIG="<vp-config-dir>/config.json" \
+VISIONPOWER_SKILL_STATE="<vp-config-dir>/skill-state.json" \
 node <skill>/describe_image.mjs /tmp/visionpower-request.json
 # or
-cat /tmp/visionpower-request.json | node <skill>/describe_image.mjs
+cat /tmp/visionpower-request.json | VISIONPOWER_CONFIG="<vp-config-dir>/config.json" VISIONPOWER_SKILL_STATE="<vp-config-dir>/skill-state.json" node <skill>/describe_image.mjs
 ```
 
-Request shape:
+请求格式：
 
 ```json
 {
@@ -130,30 +161,31 @@ Request shape:
 }
 ```
 
-## Output
+## 输出
 
-The script prints the model's answer to stdout. On failure it prints
-`VisionPower error: <reason>` to stderr and exits non-zero — read the reason and fix the
-input (for example: use an absolute path, use a publicly reachable URL, or run first-time
-setup to configure the API key).
+脚本会将模型答案打印到 stdout。失败时会将
+`VisionPower error: <reason>` 打印到 stderr，并以非零状态退出。读取错误原因并修正输入，
+例如：使用绝对路径、使用公网可访问 URL，或执行首次设置来配置 API Key。
 
-## Rules
+## 规则
 
-- `image_path` must be an **absolute** path on the machine running the script.
-- `image_url` must be **publicly reachable**; local/private addresses are rejected.
-- Provide exactly **one** source per image: `image_path` OR `image_url` OR `image_base64`.
-- Do not combine top-level image fields with `images[]`.
+- `image_path` 必须是运行脚本的机器上的**绝对路径**。
+- `image_url` 必须**公网可访问**；本地或私网地址会被拒绝。
+- 每张图片必须且只能提供**一个**来源：`image_path`、`image_url` 或 `image_base64`。
+- 不要将顶层图片字段与 `images[]` 混用。
 
-## Configuration reference
+## 配置参考
 
-Settings come from `~/.visionpower/config.json` (override the path with `VISIONPOWER_CONFIG`).
-Matching `VISIONPOWER_*` environment variables override the file.
+设置默认来自当前 Agent home 下的 `~/.visionpower/config.json`。沙箱或多 Agent
+环境应使用 `VISIONPOWER_CONFIG="<vp-config-dir>/config.json"` 覆盖路径，避免写入
+系统用户 home。匹配的 `VISIONPOWER_*` 环境变量会覆盖配置文件；推荐只在单次
+命令中临时传入，不写入系统环境。
 
 | config.json key | env override | Default | Purpose |
 | --- | --- | --- | --- |
-| `apiKey` | `VISIONPOWER_API_KEY` | — | API key for the vision provider |
-| `model` | `VISIONPOWER_MODEL` | `qwen3-vl-flash` | Vision model name |
-| `baseUrl` | `VISIONPOWER_BASE_URL` | DashScope `/compatible-mode/v1` | OpenAI-compatible base URL |
-| `maxImages` | `VISIONPOWER_MAX_IMAGES` | `8` | Max images per call |
-| `timeoutMs` | `VISIONPOWER_TIMEOUT_MS` | `60000` | Upstream timeout (ms) |
-| — | `VISIONPOWER_SKILL_STATE` | `~/.visionpower/skill-state.json` | Verified setup marker path |
+| `apiKey` | `VISIONPOWER_API_KEY` | — | 视觉服务 API Key |
+| `model` | `VISIONPOWER_MODEL` | `qwen3-vl-flash` | 视觉模型名称 |
+| `baseUrl` | `VISIONPOWER_BASE_URL` | DashScope `/compatible-mode/v1` | OpenAI-compatible Base URL |
+| `maxImages` | `VISIONPOWER_MAX_IMAGES` | `8` | 单次调用最多图片数 |
+| `timeoutMs` | `VISIONPOWER_TIMEOUT_MS` | `60000` | 上游请求超时时间（毫秒） |
+| — | `VISIONPOWER_SKILL_STATE` | `~/.visionpower/skill-state.json` | 已验证设置状态标记路径 |
